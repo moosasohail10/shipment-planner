@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Planning System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header & Navigation -->
+    <header>
+        <h2>Shipment Planner</h2>
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="btn-request">Sales Request</button>
+            <button class="tab-btn" id="btn-tracker">ID Tracker</button>
+            <button class="tab-btn" id="btn-queue">Coordinator</button>
+            <button class="tab-btn" id="btn-plant">Plant</button>
+            <button class="tab-btn" id="btn-dashboard">Dashboard</button>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="app-container">
+
+        <!-- Stage 01: Sales Request Form -->
+        <section id="tab-request" class="tab-content active">
+            <h3>01. Initiate Shipment</h3>
+            <form id="sales-form">
+                
+                <!-- Updated Product Dropdown -->
+                <div class="input-group">
+                    <label for="product">Product Type</label>
+                    <select id="product" required>
+                        <option value="">Select Product...</option>
+                        <option value="FFL NP">FFL NP</option>
+                        <option value="FFL Urea">FFL Urea</option>
+                        <option value="FFL CAN G">FFL CAN G</option>
+                        <option value="PFL Urea">PFL Urea</option>
+                        <option value="PFL NP">PFL NP</option>
+                        <option value="PFL CAN F">PFL CAN F</option>
+                    </select>
+                </div>
+                
+                <!-- Updated Quantity Label -->
+                <div class="input-group">
+                    <label for="qty">Total Quantity (Tons)</label>
+                    <input type="number" id="qty" placeholder="e.g., 500" required>
+                </div>
+
+                <!-- Cascading Dropdowns for Location -->
+                <div class="input-group">
+                    <label for="zone">Zone</label>
+                    <select id="zone" required>
+                        <option value="">Select Zone...</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="region">Sales Region</label>
+                    <select id="region" required>
+                        <option value="">Select Region...</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="location">Destination Warehouse</label>
+                    <select id="location" required>
+                        <option value="">Select Warehouse...</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="submit-btn">Submit Request</button>
+            </form>
+            <p id="form-message" class="hidden-message"></p>
+        </section>
+
+        <!-- Placeholder Sections for the other tabs -->
+        <section id="tab-tracker" class="tab-content">
+    <h3>02. ID Generation & Tracker</h3>
+    <button id="refresh-tracker" class="submit-btn" style="margin-bottom: 15px;">Refresh Live Data</button>
+    <div class="table-container">
+        <table id="tracker-table">
+            <thead>
+                <tr>
+                    <th>Shipment ID</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Destination</th>
+                    <th>Current Stage</th>
+                </tr>
+            </thead>
+            <tbody id="tracker-body">
+                <tr>
+                    <td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+        <section id="tab-queue" class="tab-content">
+            <h3>03. Coordinator Queue</h3>
+            <p style="margin-bottom: 10px;">Assign incoming requests to specific Plant Teams.</p>
+            <button id="refresh-queue" class="submit-btn" style="margin-bottom: 15px;">Check for New Requests</button>
+            <div class="table-container">
+                <table id="queue-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Assign To Plant</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queue-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Click "Check for New Requests" to load queue.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="queue-message" class="hidden-message"></p>
+        </section>
+
+        <section id="tab-plant" class="tab-content">
+            <h3>04. Plant Fulfillment</h3>
+            <p style="margin-bottom: 10px;">Execute loading and confirm batch for FIFO compliance.</p>
+            <button id="refresh-plant" class="submit-btn" style="margin-bottom: 15px;">Check Assigned Loads</button>
+            <div class="table-container">
+                <table id="plant-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Batch Date (FIFO)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plant-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Click "Check Assigned Loads" to view queue.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="plant-message" class="hidden-message"></p>
+        </section>
+        <section id="tab-dashboard" class="tab-content">
+            <h3>05. Disbursement Dashboard</h3>
+            <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
+            <button id="refresh-dashboard" class="submit-btn" style="margin-bottom: 15px;">Load Dispatched Shipments</button>
+            <div class="table-container">
+                <table id="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Destination</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Click "Load Dispatched Shipments" to view records.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Link to our JavaScript file -->
+    <script src="app.js"></script>
+</body>
+</html>
