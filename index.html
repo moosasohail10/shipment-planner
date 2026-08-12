@@ -30,8 +30,11 @@
 
     <!-- Header & Navigation -->
     <header>
-        <h2>Shipment Planner</h2>
-        <div class="nav-tabs">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
+                <h2>Shipment Planner</h2>
+                <button id="btn-logout" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Logout</button>
+            </div>
+            <div class="nav-tabs">
             <button class="tab-btn active" id="btn-request">Sales Request</button>
             <button class="tab-btn" id="btn-tracker">ID Tracker</button>
             <button class="tab-btn" id="btn-queue">Coordinator</button>
@@ -167,10 +170,23 @@
             </div>
             <p id="plant-message" class="hidden-message"></p>
         </section>
-        <section id="tab-dashboard" class="tab-content">
-            <h3>05. Disbursement Dashboard</h3>
+       <section id="tab-dashboard" class="tab-content">
+            <h3>05. Disbursement Dashboard & Summaries</h3>
+
+            <!-- NEW: Summary Blocks -->
+            <div id="summary-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div style="flex: 1; min-width: 250px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Summary (Tons)</h4>
+                    <div id="product-summary" style="overflow-x: auto;">Loading summaries...</div>
+                </div>
+                <div style="flex: 1; min-width: 250px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Destination Summary (Tons)</h4>
+                    <div id="region-summary" style="overflow-x: auto;">Loading summaries...</div>
+                </div>
+            </div>
+
             <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
-            <button id="refresh-dashboard" class="submit-btn" style="margin-bottom: 15px;">Load Dispatched Shipments</button>
+            <button id="refresh-dashboard" class="submit-btn" style="margin-bottom: 15px;">Load Live Dashboard</button>
             <div class="table-container">
                 <table id="dashboard-table">
                     <thead>

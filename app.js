@@ -59,26 +59,43 @@ function applyRoleAccess(role) {
     const plantRoles = ["Plant Logistics Manager", "Plant Logistics Officer"];
 
     // 3. Grant Access Based on Role
-    if (salesRoles.includes(role)) {
+    if (role === "Super Admin") {
+        // Super Admin gets everything
+        allTabs.forEach(id => document.getElementById(id).style.display = 'inline-block');
+        document.getElementById('btn-request').click(); 
+    }
+    else if (salesRoles.includes(role)) {
         document.getElementById('btn-request').style.display = 'inline-block';
         document.getElementById('btn-tracker').style.display = 'inline-block';
         document.getElementById('btn-dashboard').style.display = 'inline-block';
-        document.getElementById('btn-request').click(); // Auto-open Sales Request
+        document.getElementById('btn-request').click(); 
     } 
     else if (coordRoles.includes(role)) {
         document.getElementById('btn-queue').style.display = 'inline-block';
         document.getElementById('btn-tracker').style.display = 'inline-block';
         document.getElementById('btn-dashboard').style.display = 'inline-block';
-        document.getElementById('btn-queue').click(); // Auto-open Coordinator Queue
+        document.getElementById('btn-queue').click(); 
     } 
     else if (plantRoles.includes(role)) {
         document.getElementById('btn-plant').style.display = 'inline-block';
-        document.getElementById('btn-plant').click(); // Auto-open Plant Fulfillment
+        document.getElementById('btn-tracker').style.display = 'inline-block'; // New access
+        document.getElementById('btn-dashboard').style.display = 'inline-block'; // New access
+        document.getElementById('btn-plant').click(); 
     } 
     else {
         alert("Role not recognized. Please contact admin.");
     }
 }
+
+// --- LOGOUT LOGIC ---
+document.getElementById('btn-logout').addEventListener('click', function() {
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'block';
+    document.getElementById('login-form').reset();
+    document.getElementById('login-message').textContent = '';
+    const allTabs = ['btn-request', 'btn-tracker', 'btn-queue', 'btn-plant', 'btn-dashboard'];
+    allTabs.forEach(id => document.getElementById(id).style.display = 'none');
+});
 
 // --- 1. TAB NAVIGATION LOGIC ---
 
@@ -456,48 +473,90 @@ const refreshDashboardBtn = document.getElementById('refresh-dashboard');
 
 function fetchDashboard() {
     dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading records...</td></tr>';
+    document.getElementById('product-summary').innerHTML = 'Loading summaries...';
+    document.getElementById('region-summary').innerHTML = 'Loading summaries...';
 
     fetch(GOOGLE_SCRIPT_URL)
         .then(response => response.json())
         .then(data => {
             if(data.status === "success") {
-                dashboardBody.innerHTML = ''; 
+                const allShipments = data.data;
                 
-                // Filter only shipments that have been successfully dispatched (Stage 05)
-                const disbursedShipments = data.data.filter(s => s.Stage === "05. Disbursement" || s.stage === "05. Disbursement");
+                // --- BUILD SUMMARIES ---
+                let productSum = {};
+                let regionSum = {};
+                
+                allShipments.forEach(s => {
+                    let prod = s.Product_Type || s.productType || "Unknown";
+                    let location = s.Warehouse_Location || s.location || "Unknown";
+                    let shortLoc = location.includes(" - ") ? location.split(" - ")[0] : location;
+                    let stage = s.Stage || s.stage || "Unknown";
+                    let qty = parseFloat(s.Daily_Qty || s.dailyQty) || 0;
+                    
+                    // Group by Product & Stage
+                    if(!productSum[prod]) productSum[prod] = {};
+                    if(!productSum[prod][stage]) productSum[prod][stage] = 0;
+                    productSum[prod][stage] += qty;
+                    
+                    // Group by Destination & Stage
+                    if(!regionSum[shortLoc]) regionSum[shortLoc] = {};
+                    if(!regionSum[shortLoc][stage]) regionSum[shortLoc][stage] = 0;
+                    regionSum[shortLoc][stage] += qty;
+                });
+
+                // Generate Product HTML Table
+                let prodHtml = '<table style="width:100%; font-size:0.85rem; border-collapse:collapse; text-align:left;"><tr><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Product</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Stage</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Total Qty</th></tr>';
+                for (let p in productSum) {
+                    for (let st in productSum[p]) {
+                        prodHtml += `<tr><td style="border-bottom:1px solid #eee; padding:5px 0;"><strong>${p}</strong></td><td style="border-bottom:1px solid #eee; padding:5px 0;">${st}</td><td style="border-bottom:1px solid #eee; padding:5px 0;">${productSum[p][st]}</td></tr>`;
+                    }
+                }
+                prodHtml += '</table>';
+                document.getElementById('product-summary').innerHTML = prodHtml;
+
+                // Generate Region HTML Table
+                let regHtml = '<table style="width:100%; font-size:0.85rem; border-collapse:collapse; text-align:left;"><tr><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Destination</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Stage</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Total Qty</th></tr>';
+                for (let r in regionSum) {
+                    for (let st in regionSum[r]) {
+                        regHtml += `<tr><td style="border-bottom:1px solid #eee; padding:5px 0;"><strong>${r}</strong></td><td style="border-bottom:1px solid #eee; padding:5px 0;">${st}</td><td style="border-bottom:1px solid #eee; padding:5px 0;">${regionSum[r][st]}</td></tr>`;
+                    }
+                }
+                regHtml += '</table>';
+                document.getElementById('region-summary').innerHTML = regHtml;
+
+                // --- BUILD COMPLETED TABLE ---
+                dashboardBody.innerHTML = ''; 
+                const disbursedShipments = allShipments.filter(s => s.Stage === "05. Disbursement" || s.stage === "05. Disbursement");
                 
                 if (disbursedShipments.length === 0) {
                     dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No completed shipments yet!</td></tr>';
                     return;
                 }
 
-                // Reverse the array so the most recently dispatched items appear at the very top
                 disbursedShipments.reverse().forEach(shipment => {
                     let uid = shipment.UID || shipment.uid;
                     let product = shipment.Product_Type || shipment.productType;
                     let qty = shipment.Daily_Qty || shipment.dailyQty;
-                    let location = shipment.Warehouse_Location || shipment.location || "N/A";
-                    
-                    // Clean up the location name for the table
-                    let shortLocation = location.includes(" - ") ? location.split(" - ")[0] : location;
+                    let loc = shipment.Warehouse_Location || shipment.location || "N/A";
+                    let shortL = loc.includes(" - ") ? loc.split(" - ")[0] : loc;
 
                     let row = `<tr>
                         <td><strong>${uid}</strong></td>
                         <td>${product}</td>
                         <td>${qty}</td>
-                        <td>${shortLocation}</td>
+                        <td>${shortL}</td>
                         <td><span class="stage-badge" style="background:#28a745; color:white;">Completed</span></td>
                     </tr>`;
-                    
                     dashboardBody.innerHTML += row;
                 });
             }
         })
         .catch(error => {
             dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Error loading dashboard.</td></tr>';
+            document.getElementById('product-summary').innerHTML = 'Error loading data.';
+            document.getElementById('region-summary').innerHTML = 'Error loading data.';
         });
 }
-
 // Trigger fetch when button is clicked or tab is opened
 if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDashboard);
 document.getElementById('btn-dashboard').addEventListener('click', fetchDashboard);
