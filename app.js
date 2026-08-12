@@ -1,6 +1,9 @@
 // Paste your Google Apps Script URL here between the quotes!
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzE97nuElYbx_KKgSYqOj_GQSiLx5S4zPmVOsaO-Vf00cc0681UNnaBhdbCMEUWkMIT/exec'; // (Keep your actual URL here!)
 
+let prodChartInstance = null;
+let regChartInstance = null;
+
 // --- 0. LOGIN & ROLE ACCESS LOGIC ---
 const loginForm = document.getElementById('login-form');
 const loginMessage = document.getElementById('login-message');
@@ -467,14 +470,12 @@ if (refreshPlantBtn) refreshPlantBtn.addEventListener('click', fetchPlantQueue);
 document.getElementById('btn-plant').addEventListener('click', fetchPlantQueue);
 
 
-// --- 7. DISBURSEMENT DASHBOARD LOGIC ---
+// --- 7. DISBURSEMENT DASHBOARD LOGIC (UPDATED WITH CHART.JS) ---
 const dashboardBody = document.getElementById('dashboard-body');
 const refreshDashboardBtn = document.getElementById('refresh-dashboard');
 
 function fetchDashboard() {
     dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading records...</td></tr>';
-    document.getElementById('product-summary').innerHTML = 'Loading summaries...';
-    document.getElementById('region-summary').innerHTML = 'Loading summaries...';
 
     fetch(GOOGLE_SCRIPT_URL)
         .then(response => response.json())
@@ -482,49 +483,55 @@ function fetchDashboard() {
             if(data.status === "success") {
                 const allShipments = data.data;
                 
-                // --- BUILD SUMMARIES ---
-                let productSum = {};
-                let regionSum = {};
+                // --- 1. CALCULATE TOTALS FOR CHARTS ---
+                let prodTotals = {};
+                let regTotals = {};
                 
                 allShipments.forEach(s => {
                     let prod = s.Product_Type || s.productType || "Unknown";
                     let location = s.Warehouse_Location || s.location || "Unknown";
                     let shortLoc = location.includes(" - ") ? location.split(" - ")[0] : location;
-                    let stage = s.Stage || s.stage || "Unknown";
                     let qty = parseFloat(s.Daily_Qty || s.dailyQty) || 0;
                     
-                    // Group by Product & Stage
-                    if(!productSum[prod]) productSum[prod] = {};
-                    if(!productSum[prod][stage]) productSum[prod][stage] = 0;
-                    productSum[prod][stage] += qty;
+                    // Add to Product Total
+                    if(!prodTotals[prod]) prodTotals[prod] = 0;
+                    prodTotals[prod] += qty;
                     
-                    // Group by Destination & Stage
-                    if(!regionSum[shortLoc]) regionSum[shortLoc] = {};
-                    if(!regionSum[shortLoc][stage]) regionSum[shortLoc][stage] = 0;
-                    regionSum[shortLoc][stage] += qty;
+                    // Add to Region Total
+                    if(!regTotals[shortLoc]) regTotals[shortLoc] = 0;
+                    regTotals[shortLoc] += qty;
                 });
 
-                // Generate Product HTML Table
-                let prodHtml = '<table style="width:100%; font-size:0.85rem; border-collapse:collapse; text-align:left;"><tr><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Product</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Stage</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Total Qty</th></tr>';
-                for (let p in productSum) {
-                    for (let st in productSum[p]) {
-                        prodHtml += `<tr><td style="border-bottom:1px solid #eee; padding:5px 0;"><strong>${p}</strong></td><td style="border-bottom:1px solid #eee; padding:5px 0;">${st}</td><td style="border-bottom:1px solid #eee; padding:5px 0;">${productSum[p][st]}</td></tr>`;
-                    }
-                }
-                prodHtml += '</table>';
-                document.getElementById('product-summary').innerHTML = prodHtml;
+                // --- 2. DRAW PRODUCT DOUGHNUT CHART ---
+                if(prodChartInstance) prodChartInstance.destroy();
+                prodChartInstance = new Chart(document.getElementById('productChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(prodTotals),
+                        datasets: [{
+                            data: Object.values(prodTotals),
+                            backgroundColor: ['#1a5c3a', '#f9a826', '#28a745', '#17a2b8', '#6c757d', '#dc3545']
+                        }]
+                    },
+                    options: { maintainAspectRatio: false }
+                });
 
-                // Generate Region HTML Table
-                let regHtml = '<table style="width:100%; font-size:0.85rem; border-collapse:collapse; text-align:left;"><tr><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Destination</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Stage</th><th style="border-bottom:2px solid #ddd; padding-bottom:5px;">Total Qty</th></tr>';
-                for (let r in regionSum) {
-                    for (let st in regionSum[r]) {
-                        regHtml += `<tr><td style="border-bottom:1px solid #eee; padding:5px 0;"><strong>${r}</strong></td><td style="border-bottom:1px solid #eee; padding:5px 0;">${st}</td><td style="border-bottom:1px solid #eee; padding:5px 0;">${regionSum[r][st]}</td></tr>`;
-                    }
-                }
-                regHtml += '</table>';
-                document.getElementById('region-summary').innerHTML = regHtml;
+                // --- 3. DRAW DESTINATION BAR CHART ---
+                if(regChartInstance) regChartInstance.destroy();
+                regChartInstance = new Chart(document.getElementById('regionChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(regTotals),
+                        datasets: [{
+                            label: 'Total Tons',
+                            data: Object.values(regTotals),
+                            backgroundColor: '#1a5c3a'
+                        }]
+                    },
+                    options: { maintainAspectRatio: false }
+                });
 
-                // --- BUILD COMPLETED TABLE ---
+                // --- 4. BUILD COMPLETED TABLE ---
                 dashboardBody.innerHTML = ''; 
                 const disbursedShipments = allShipments.filter(s => s.Stage === "05. Disbursement" || s.stage === "05. Disbursement");
                 
@@ -553,10 +560,9 @@ function fetchDashboard() {
         })
         .catch(error => {
             dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Error loading dashboard.</td></tr>';
-            document.getElementById('product-summary').innerHTML = 'Error loading data.';
-            document.getElementById('region-summary').innerHTML = 'Error loading data.';
         });
 }
+
 // Trigger fetch when button is clicked or tab is opened
 if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDashboard);
 document.getElementById('btn-dashboard').addEventListener('click', fetchDashboard);

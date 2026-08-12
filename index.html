@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipment Planning System</title>
     <link rel="stylesheet" href="style.css">
+    <!-- NEW: Load Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -182,19 +184,17 @@
         <section id="tab-dashboard" class="tab-content">
             <h3>05. Disbursement Dashboard & Summaries</h3>
 
-            <!-- Summary Blocks -->
+          <!-- Summary Blocks with Charts -->
             <div id="summary-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
-                <div style="flex: 1; min-width: 250px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
-                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Summary (Tons)</h4>
-                    <div id="product-summary" style="overflow-x: auto;">Loading summaries...</div>
+                <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; text-align: center;">
+                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Volume (Tons)</h4>
+                    <canvas id="productChart" style="max-height: 220px;"></canvas>
                 </div>
-                <div style="flex: 1; min-width: 250px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
-                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Destination Summary (Tons)</h4>
-                    <div id="region-summary" style="overflow-x: auto;">Loading summaries...</div>
+                <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; text-align: center;">
+                    <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Destination Volume (Tons)</h4>
+                    <canvas id="regionChart" style="max-height: 220px;"></canvas>
                 </div>
             </div>
-
-            <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
             
             <!-- Dashboard Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
