@@ -179,8 +179,8 @@ const submitBtn = document.querySelector('.submit-btn');
 salesForm.addEventListener('submit', function(e) {
     e.preventDefault(); // Stop the page from reloading
     
-    // Disable button to prevent double-clicking
-    submitBtn.textContent = 'Submitting...';
+    // Disable button and add loading spinner
+    submitBtn.innerHTML = '<span class="spinner"></span>Submitting...';
     submitBtn.disabled = true;
 
     // Generate Unique FAT-ID (Format: FAT-YYYYMMDD-Random3Digits)
@@ -210,9 +210,8 @@ salesForm.addEventListener('submit', function(e) {
         body: JSON.stringify(payload)
     })
     .then(() => {
-        // Since we use no-cors, we assume success if no network error throws
-        formMessage.style.color = "#1a5c3a";
-        formMessage.textContent = "Success! Shipment ID: " + uniqueId + " has been initiated.";
+        // Trigger Toast Notification
+        showToast("Success! Shipment ID: " + uniqueId + " has been initiated.", "success");
         salesForm.reset(); // Clear the form
         
         // Reset dropdowns
@@ -220,8 +219,7 @@ salesForm.addEventListener('submit', function(e) {
         warehouseSelect.innerHTML = '<option value="">Select Warehouse...</option>';
     })
     .catch((error) => {
-        formMessage.style.color = "red";
-        formMessage.textContent = "Error saving request. Please check your internet connection.";
+        showToast("Error saving request. Check connection.", "error");
         console.error('Error:', error);
     })
     .finally(() => {
@@ -250,14 +248,12 @@ function fetchShipments() {
                 const shipments = data.data.reverse(); 
                 
                 shipments.forEach(shipment => {
-                    // We check for both casing styles just in case your Google Sheet headers differ slightly
                     let uid = shipment.UID || shipment.uid || "N/A";
                     let product = shipment.Product_Type || shipment.productType || "N/A";
                     let qty = shipment.Daily_Qty || shipment.dailyQty || "0";
                     let location = shipment.Warehouse_Location || shipment.location || "N/A";
                     let stage = shipment.Stage || shipment.stage || "N/A";
 
-                    // Split the location string to just show the WH Code for cleaner mobile viewing
                     let shortLocation = location.includes(" - ") ? location.split(" - ")[0] : location;
 
                     let row = `<tr>
@@ -278,12 +274,9 @@ function fetchShipments() {
         });
 }
 
-// Trigger the fetch when the refresh button is clicked
 if(refreshTrackerBtn) {
     refreshTrackerBtn.addEventListener('click', fetchShipments);
 }
-
-// Auto-trigger the fetch when you click the "ID Tracker" tab at the top
 document.getElementById('btn-tracker').addEventListener('click', fetchShipments);
 
 // --- 5. COORDINATOR QUEUE LOGIC ---
@@ -301,7 +294,6 @@ function fetchQueue() {
             if(data.status === "success") {
                 queueBody.innerHTML = ''; 
                 
-                // Filter only shipments that are in Stage 01
                 const pendingShipments = data.data.filter(s => s.Stage === "01. Initiation" || s.stage === "01. Initiation");
                 
                 if (pendingShipments.length === 0) {
@@ -312,7 +304,7 @@ function fetchQueue() {
                 pendingShipments.forEach(shipment => {
                     let uid = shipment.UID || shipment.uid;
                     let product = shipment.Product_Type || shipment.productType;
-                    let qty = shipment.Daily_Qty || shipment.dailyQty; // Maps to Total Quantity
+                    let qty = shipment.Daily_Qty || shipment.dailyQty;
 
                     let row = `<tr>
                         <td><strong>${uid}</strong></td>
@@ -340,7 +332,6 @@ function fetchQueue() {
         });
 }
 
-// Function triggered when "Assign" button is clicked in the table
 window.assignPlant = function(uid) {
     const selectedPlant = document.getElementById(`plant-select-${uid}`).value;
     
@@ -349,13 +340,10 @@ window.assignPlant = function(uid) {
         return;
     }
 
-    queueMessage.style.color = "#1a5c3a";
-    queueMessage.textContent = `Assigning ${uid} to ${selectedPlant}...`;
-
     const payload = {
         action: "update",
         uid: uid,
-        stage: "04. Fulfillment", // Automatically moves it to the Plant stage
+        stage: "04. Fulfillment", 
         assignedPlant: selectedPlant
     };
 
@@ -367,16 +355,14 @@ window.assignPlant = function(uid) {
         body: JSON.stringify(payload)
     })
     .then(() => {
-        queueMessage.textContent = "Successfully assigned! Refreshing queue...";
-        setTimeout(fetchQueue, 1500); // Reload the queue after a brief pause
+        showToast(`Successfully assigned ${uid} to ${selectedPlant}!`, "success");
+        setTimeout(fetchQueue, 1500); 
     })
     .catch((error) => {
-        queueMessage.style.color = "red";
-        queueMessage.textContent = "Error updating shipment.";
+        showToast("Error updating shipment.", "error");
     });
 };
 
-// Trigger fetch when button is clicked or tab is opened
 if (refreshQueueBtn) refreshQueueBtn.addEventListener('click', fetchQueue);
 document.getElementById('btn-queue').addEventListener('click', fetchQueue);
 
@@ -395,7 +381,6 @@ function fetchPlantQueue() {
             if(data.status === "success") {
                 plantBody.innerHTML = ''; 
                 
-                // Filter only shipments that have been assigned to a plant (Stage 04)
                 const plantShipments = data.data.filter(s => s.Stage === "04. Fulfillment" || s.stage === "04. Fulfillment");
                 
                 if (plantShipments.length === 0) {
@@ -429,7 +414,6 @@ function fetchPlantQueue() {
         });
 }
 
-// Function triggered when "Dispatch" button is clicked
 window.dispatchPlant = function(uid) {
     const batchDate = document.getElementById(`batch-date-${uid}`).value;
     
@@ -438,14 +422,11 @@ window.dispatchPlant = function(uid) {
         return;
     }
 
-    plantMessage.style.color = "#1a5c3a";
-    plantMessage.textContent = `Dispatching ${uid}...`;
-
     const payload = {
         action: "update",
         uid: uid,
-        stage: "05. Disbursement", // Moves to final dashboard
-        assignedPlant: "Dispatched" // Optional: Update plant status
+        stage: "05. Disbursement", 
+        assignedPlant: "Dispatched" 
     };
 
     fetch(GOOGLE_SCRIPT_URL, {
@@ -456,21 +437,19 @@ window.dispatchPlant = function(uid) {
         body: JSON.stringify(payload)
     })
     .then(() => {
-        plantMessage.textContent = "Successfully dispatched! Refreshing queue...";
+        showToast(`Shipment ${uid} successfully dispatched!`, "success");
         setTimeout(fetchPlantQueue, 1500); 
     })
     .catch((error) => {
-        plantMessage.style.color = "red";
-        plantMessage.textContent = "Error updating shipment.";
+        showToast("Error updating shipment.", "error");
     });
 };
 
-// Trigger fetch when button is clicked or tab is opened
 if (refreshPlantBtn) refreshPlantBtn.addEventListener('click', fetchPlantQueue);
 document.getElementById('btn-plant').addEventListener('click', fetchPlantQueue);
 
 
-// --- 7. DISBURSEMENT DASHBOARD LOGIC (UPDATED WITH CHART.JS) ---
+// --- 7. DISBURSEMENT DASHBOARD LOGIC ---
 const dashboardBody = document.getElementById('dashboard-body');
 const refreshDashboardBtn = document.getElementById('refresh-dashboard');
 
@@ -483,7 +462,6 @@ function fetchDashboard() {
             if(data.status === "success") {
                 const allShipments = data.data;
                 
-                // --- 1. CALCULATE TOTALS FOR CHARTS ---
                 let prodTotals = {};
                 let regTotals = {};
                 
@@ -493,16 +471,13 @@ function fetchDashboard() {
                     let shortLoc = location.includes(" - ") ? location.split(" - ")[0] : location;
                     let qty = parseFloat(s.Daily_Qty || s.dailyQty) || 0;
                     
-                    // Add to Product Total
                     if(!prodTotals[prod]) prodTotals[prod] = 0;
                     prodTotals[prod] += qty;
                     
-                    // Add to Region Total
                     if(!regTotals[shortLoc]) regTotals[shortLoc] = 0;
                     regTotals[shortLoc] += qty;
                 });
 
-                // --- 2. DRAW PRODUCT DOUGHNUT CHART ---
                 if(prodChartInstance) prodChartInstance.destroy();
                 prodChartInstance = new Chart(document.getElementById('productChart'), {
                     type: 'doughnut',
@@ -516,7 +491,6 @@ function fetchDashboard() {
                     options: { maintainAspectRatio: false }
                 });
 
-                // --- 3. DRAW DESTINATION BAR CHART ---
                 if(regChartInstance) regChartInstance.destroy();
                 regChartInstance = new Chart(document.getElementById('regionChart'), {
                     type: 'bar',
@@ -531,7 +505,6 @@ function fetchDashboard() {
                     options: { maintainAspectRatio: false }
                 });
 
-                // --- 4. BUILD COMPLETED TABLE ---
                 dashboardBody.innerHTML = ''; 
                 const disbursedShipments = allShipments.filter(s => s.Stage === "05. Disbursement" || s.stage === "05. Disbursement");
                 
@@ -563,13 +536,10 @@ function fetchDashboard() {
         });
 }
 
-// Trigger fetch when button is clicked or tab is opened
 if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDashboard);
 document.getElementById('btn-dashboard').addEventListener('click', fetchDashboard);
 
 // --- 8. SEARCH & EXPORT ENHANCEMENTS ---
-
-// Search Filter Logic for ID Tracker
 const searchInput = document.getElementById('search-tracker');
 if (searchInput) {
     searchInput.addEventListener('keyup', function() {
@@ -577,42 +547,55 @@ if (searchInput) {
         let rows = document.querySelectorAll('#tracker-body tr');
         
         rows.forEach(row => {
-            // Check if the row contains the search text
             let rowText = row.textContent.toLowerCase();
             if (rowText.includes(filter)) {
-                row.style.display = ''; // Show row
+                row.style.display = ''; 
             } else {
-                row.style.display = 'none'; // Hide row
+                row.style.display = 'none'; 
             }
         });
     });
 }
 
-// Export to CSV Logic for Dashboard
 const exportBtn = document.getElementById('export-csv');
 if (exportBtn) {
     exportBtn.addEventListener('click', function() {
         let csv = [];
-        // Grab the dashboard table
         let rows = document.querySelectorAll('#dashboard-table tr');
         
         for (let i = 0; i < rows.length; i++) {
             let row = [], cols = rows[i].querySelectorAll('td, th');
             for (let j = 0; j < cols.length; j++) {
-                // Wrap text in quotes to prevent issues with commas in the data
                 row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
             }
             csv.push(row.join(','));
         }
         
-        // Create a downloadable file link
         let csvString = csv.join('\n');
         let downloadLink = document.createElement('a');
         downloadLink.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvString);
         downloadLink.target = '_blank';
         downloadLink.download = 'Fatima_Fertilizer_Disbursement_Report.csv';
         
-        // Trigger the download
         downloadLink.click();
     });
+}
+
+// --- 9. TOAST NOTIFICATION SYSTEM ---
+function showToast(message, type = "success") {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => { toast.classList.add('show'); }, 100);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.remove(); }, 300);
+    }, 3500);
 }
