@@ -8,6 +8,26 @@
 </head>
 <body>
 
+    <!-- NEW: LOGIN SCREEN -->
+    <div id="login-screen" class="app-container" style="margin-top: 50px;">
+        <h2 style="text-align: center; color: #1a5c3a; margin-bottom: 20px;">Fatima Fertilizer Login</h2>
+        <form id="login-form">
+            <div class="input-group">
+                <label for="login-user">Username</label>
+                <input type="text" id="login-user" required>
+            </div>
+            <div class="input-group">
+                <label for="login-pass">Password</label>
+                <input type="password" id="login-pass" required>
+            </div>
+            <button type="submit" class="submit-btn" id="login-btn">Login</button>
+            <p id="login-message" class="hidden-message"></p>
+        </form>
+    </div>
+
+    <!-- WRAPPER: HIDES THE APP UNTIL LOGIN IS SUCCESSFUL -->
+    <div id="main-app" style="display: none;">
+
     <!-- Header & Navigation -->
     <header>
         <h2>Shipment Planner</h2>
@@ -168,9 +188,9 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-        </section>
+            </div></section>
     </main>
+    </div> <!-- Closes the main-app wrapper -->
 
     <!-- Link to our JavaScript file -->
     <script src="app.js"></script>

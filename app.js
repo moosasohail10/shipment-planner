@@ -1,5 +1,86 @@
 // Paste your Google Apps Script URL here between the quotes!
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzE97nuElYbx_KKgSYqOj_GQSiLx5S4zPmVOsaO-Vf00cc0681UNnaBhdbCMEUWkMIT/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzE97nuElYbx_KKgSYqOj_GQSiLx5S4zPmVOsaO-Vf00cc0681UNnaBhdbCMEUWkMIT/exec'; // (Keep your actual URL here!)
+
+// --- 0. LOGIN & ROLE ACCESS LOGIC ---
+const loginForm = document.getElementById('login-form');
+const loginMessage = document.getElementById('login-message');
+const loginBtn = document.getElementById('login-btn');
+const loginScreen = document.getElementById('login-screen');
+const mainApp = document.getElementById('main-app');
+
+loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    loginBtn.textContent = 'Verifying...';
+    loginBtn.disabled = true;
+
+    const payload = {
+        action: "login",
+        username: document.getElementById('login-user').value,
+        password: document.getElementById('login-pass').value
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === "success") {
+            // Hide login, show app
+            loginScreen.style.display = 'none';
+            mainApp.style.display = 'block';
+
+            // Apply Role Restrictions
+            applyRoleAccess(data.role);
+        } else {
+            loginMessage.style.color = "red";
+            loginMessage.textContent = "Invalid Username or Password";
+            loginBtn.textContent = 'Login';
+            loginBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        loginMessage.style.color = "red";
+        loginMessage.textContent = "Connection error. Please try again.";
+        loginBtn.textContent = 'Login';
+        loginBtn.disabled = false;
+    });
+});
+
+function applyRoleAccess(role) {
+    // 1. Hide all tabs by default
+    const allTabs = ['btn-request', 'btn-tracker', 'btn-queue', 'btn-plant', 'btn-dashboard'];
+    allTabs.forEach(id => document.getElementById(id).style.display = 'none');
+
+    // 2. Define Groups
+    const salesRoles = ["District Sales Manager", "Regional Sales Manager", "Regional Distribution Manager"];
+    const coordRoles = ["Zonal Sales Coordinator"];
+    const plantRoles = ["Plant Logistics Manager", "Plant Logistics Officer"];
+
+    // 3. Grant Access Based on Role
+    if (salesRoles.includes(role)) {
+        document.getElementById('btn-request').style.display = 'inline-block';
+        document.getElementById('btn-tracker').style.display = 'inline-block';
+        document.getElementById('btn-dashboard').style.display = 'inline-block';
+        document.getElementById('btn-request').click(); // Auto-open Sales Request
+    } 
+    else if (coordRoles.includes(role)) {
+        document.getElementById('btn-queue').style.display = 'inline-block';
+        document.getElementById('btn-tracker').style.display = 'inline-block';
+        document.getElementById('btn-dashboard').style.display = 'inline-block';
+        document.getElementById('btn-queue').click(); // Auto-open Coordinator Queue
+    } 
+    else if (plantRoles.includes(role)) {
+        document.getElementById('btn-plant').style.display = 'inline-block';
+        document.getElementById('btn-plant').click(); // Auto-open Plant Fulfillment
+    } 
+    else {
+        alert("Role not recognized. Please contact admin.");
+    }
+}
+
+// --- 1. TAB NAVIGATION LOGIC ---
 
 // Fatima Fertilizer Warehouse Data 
 const warehouseData = {"CENTER (ZONE)":{"BAHAWALPUR":[{"code":"512700","name":"LODHRAN BULK WH"},{"code":"512718","name":"LODHRAN3 WH"},{"code":"512719","name":"KEHROR PACCA 4 WH"},{"code":"512721","name":"LODHRAN-4 WH"},{"code":"513201","name":"HASILPUR WH"},{"code":"513204","name":"YAZMAN WH"},{"code":"513212","name":"NOORPUR NAURANGA 2 WH"},{"code":"513214","name":"BAHAWALPUR4 WH"},{"code":"513218","name":"BAHAWALPUR-7 WH"},{"code":"513219","name":"BAHAWALPUR-8 WH"},{"code":"513221","name":"Bahawalpur-10 WH"},{"code":"513222","name":"Bahawalpur-11 WH"},{"code":"513223","name":"Samma Satta Bulk WH"},{"code":"513302","name":"BAHAWALNAGAR WH"},{"code":"513307","name":"CHISHTIAN WH-3"},{"code":"513310","name":"Minchinabad-2 WH"},{"code":"513311","name":"Fort Abbas-2 WH"},{"code":"513312","name":"Khichiwala WH"}],"D.G.KHAN":[{"code":"512101","name":"BHAKKAR WH"},{"code":"512102","name":"Bhakkar 2 WH"},{"code":"512801","name":"LAYYAH WH"},{"code":"512803","name":"KAROR LAL ESAN WH"},{"code":"512804","name":"Qaziabad WH"},{"code":"512901","name":"JATOI WH"},{"code":"512902","name":"KOT ADDU WH"},{"code":"512907","name":"Pathan Hotel WH"},{"code":"512908","name":"MUZAFFARGARH BULK WH"},{"code":"512909","name":"Langar Sarai WH"},{"code":"512910","name":"Adda Basira WH"},{"code":"512912","name":"Muzaffargarh 4 WH"},{"code":"513001","name":"D.G. KHAN WH"},{"code":"513002","name":"BAGGA SHER WH"},{"code":"513004","name":"TAUNSA WH"},{"code":"513006","name":"DG Khan Bulk WH"},{"code":"513101","name":"JAMPUR WH"},{"code":"513103","name":"Fazilpur WH"},{"code":"513104","name":"RAJANPUR-2 WH"},{"code":"545802","name":"D.I.KHAN WH 2"}],"MULTAN":[{"code":"512400","name":"BUREWALA BULK WH"},{"code":"512403","name":"VEHARI WH"},{"code":"512404","name":"GAGO MANDI WH"},{"code":"512407","name":"MAILSI-3 WH"},{"code":"512415","name":"ADDA ZAHEER NAGAR WH"},{"code":"512417","name":"Mailsi Bulk WH"},{"code":"512501","name":"MIANCHANU WH"},{"code":"512502","name":"KHANEWAL WH"},{"code":"512506","name":"MIANCHANNU 2 WH"},{"code":"512507","name":"KHANEWAL-2 WH"},{"code":"512508","name":"MIAN CHANNU-3 WH"},{"code":"512510","name":"Batti Bangla WH"},{"code":"512511","name":"PULL-14 WH"},{"code":"512600","name":"MULTAN 2 WH"},{"code":"512601","name":"MULTAN WH"},{"code":"512615","name":"CHOWK MAITLA WH"},{"code":"512620","name":"Multan Bulk - 11"},{"code":"512624","name":"JALALPUR PIRWALA WH"},{"code":"512628","name":"ADDA SADIQ WALA BULK 2 WH"},{"code":"512629","name":"MULTAN BULK 12 WH"},{"code":"512630","name":"MULTAN 13 WH"},{"code":"512633","name":"JALALPUR PIRWALA-2 WH"},{"code":"512635","name":"MULTAN 16 WH"},{"code":"512636","name":"MULTAN 17 BULK WH"},{"code":"512637","name":"MULTAN 18 WH"},{"code":"512638","name":"ADDA SADIQ WALA BULK 3 WH"},{"code":"512639","name":"MULTAN 20 WH"},{"code":"512640","name":"MULTAN 22 WH"},{"code":"512641","name":"MULTAN 21 WH"},{"code":"512642","name":"Multan 23 WH"},{"code":"512643","name":"Multan Bulk-25 WH"},{"code":"512644","name":"Multan-24 WH"},{"code":"512645","name":"Multan-26 WH"},{"code":"512647","name":"INDUSTRIAL AREA MULTAN-2 WH"},{"code":"512648","name":"Kayanpur Chowk WH"},{"code":"512649","name":"Industrial Area Multan-3 WH"},{"code":"512650","name":"ADDA LAR WH"},{"code":"512651","name":"Tatepur WH"},{"code":"512652","name":"Qadirpur Ran WH"},{"code":"512653","name":"Industrial Area Multan-4 WH"},{"code":"512654","name":"Chowk BCG WH"},{"code":"512655","name":"Qadirpur Ran-2 WH"},{"code":"512656","name":"JALALPUR PIRWALA - 3 WH"},{"code":"512657","name":"Industrial Area Multan-5 WH"},{"code":"512658","name":"CHOWK NAG SHAH-3 WH"},{"code":"512660","name":"Adda Lar-3 WH"},{"code":"512661","name":"Industrial Area Multan-6 WH"},{"code":"512662","name":"ADDA LAR-4 WH"},{"code":"512663","name":"CHOWK NAG SHAH-4 WH"},{"code":"512664","name":"NLC ByPass WH"},{"code":"512665","name":"Industrial Area Multan-7 WH"},{"code":"512666","name":"Munirabad Bulk WH"},{"code":"512667","name":"Multan Bulk 27 WH"},{"code":"512668","name":"Multan Bulk 28 WH"},{"code":"512669","name":"Multan Bulk 29 WH"},{"code":"512670","name":"Qadirpur Ran-3 WH"},{"code":"512671","name":"Multan Bulk 30 WH"},{"code":"512672","name":"Adda Gopalpur WH"},{"code":"512673","name":"Industrial Area Multan-08 WH"},{"code":"512674","name":"Pakarab Plant WH"}]},"NORTH (ZONE)":{"FAISALABAD":[{"code":"510201","name":"CHINIOT-2 WH"},{"code":"510801","name":"MANDI BAHAUDIN WH"},{"code":"511603","name":"CHINIOT WH"},{"code":"511612","name":"JHANG 4 WH"},{"code":"511613","name":"Jhang 5 WH"},{"code":"511701","name":"JARANWALA WH"},{"code":"511703","name":"SAMUNDRI 2 WH"},{"code":"511709","name":"FAISALABAD-2 WH"},{"code":"511710","name":"FAISALABAD INDUSTRIAL ESTATE WH"},{"code":"511801","name":"SARGODHA WH"},{"code":"511802","name":"BHALWAL WH"},{"code":"511805","name":"MIANWALI WH"}],"ISLAMABAD":[{"code":"510102","name":"Faqirabad-3 WH"},{"code":"540802","name":"Baffa Duraha-2 WH"},{"code":"541304","name":"MARDAN3 WH"},{"code":"541604","name":"Peshawar 4 WH"}],"LAHORE":[{"code":"510605","name":"Eminabad WH"},{"code":"510701","name":"DASKA WH"},{"code":"510901","name":"NAROWAL WH"},{"code":"511001","name":"HAFIZABAD WH"},{"code":"511002","name":"Pindi Bhattian WH"},{"code":"511202","name":"KHORI LHR WH"},{"code":"511204","name":"Sarsabz Retail Outlet Sharqpur"},{"code":"511302","name":"PATTOKI WH"},{"code":"511303","name":"KASUR WH"},{"code":"511307","name":"ELLAHABAD-2 WH"},{"code":"513501","name":"MANDI FAIZABAD WH"},{"code":"513502","name":"SHAHKOT WH"},{"code":"536001","name":"DH-WH"}],"SAHIWAL":[{"code":"511401","name":"OKARA WH"},{"code":"511402","name":"DEPALPUR WH"},{"code":"511406","name":"OKARA BULK WH"},{"code":"511408","name":"HAVAILI LAKHA-2 WH"},{"code":"511409","name":"Okara-2 WH"},{"code":"511505","name":"GOJRA BULK WH"},{"code":"511507","name":"T.T.SINGH WH2"},{"code":"511508","name":"T.T Singh-3 WH"},{"code":"512201","name":"SAHIWAL WH"},{"code":"512202","name":"HARAPPA WH"},{"code":"512205","name":"90-Morr WH"},{"code":"512206","name":"ADDA GHAZIABAD WH"},{"code":"512207","name":"CHICHAWATNI-2 WH"},{"code":"512208","name":"Qadirabad WH"},{"code":"512301","name":"PAKPATTAN WH"},{"code":"512302","name":"ARIFWALA WH"},{"code":"512305","name":"Pakpattan Bulk WH"}]},"SOUTH (ZONE)":{"HYDERABAD":[{"code":"520902","name":"NAWABSHAH WH"},{"code":"521001","name":"SHAHDADPUR WH"},{"code":"521002","name":"KHIPRO WH"},{"code":"521103","name":"MIRPURKHAS-3 WH"},{"code":"521201","name":"TANDO ALLAH YAR WH"},{"code":"521501","name":"MATLI WH"},{"code":"521506","name":"GOLARCHI-2 WH"},{"code":"521602","name":"THATTA WH"},{"code":"521802","name":"HALA 2"},{"code":"521804","name":"Hala-3 WH"},{"code":"522501","name":"TANDO ALLAH YAR-2 WH"},{"code":"532601","name":"HUB CHOWKI WH"},{"code":"890002","name":"Qazi WH"}],"R.Y.KHAN":[{"code":"513202","name":"AHMED PUR EAST WH"},{"code":"513400","name":"SADIQABAD BULK WH"},{"code":"513401","name":"RAHIM YAR KHAN WH"},{"code":"513402","name":"KHANPUR WH"},{"code":"513404","name":"LIAQATPUR WH"},{"code":"513406","name":"Rahim Yar Khan WH - 2"},{"code":"513409","name":"RAHIM YAR KHAN - 3 WH"},{"code":"513415","name":"RYK BULK WAREHOUSE"},{"code":"513427","name":"KHANPUR-2 WH"},{"code":"513432","name":"SADIQABAD BULK-2 WH"},{"code":"513435","name":"SADIQABAD BULK-3 WH"},{"code":"513439","name":"Thali Chowk Bulk WH"},{"code":"513440","name":"Sardar Garh Bulk WH"},{"code":"513441","name":"Akramabad Bulk WH"},{"code":"513442","name":"Hussain Abad Bulk WH"},{"code":"513443","name":"Basti Malikpur Bulk WH"},{"code":"513444","name":"Waahi Shah Bulk WH"},{"code":"513445","name":"Al-Ghazi Bulk WH"},{"code":"513446","name":"Taj Chowk Bulk WH"},{"code":"513449","name":"Hajveri Bulk WH"},{"code":"513450","name":"Tillu Road Bulk WH"},{"code":"513451","name":"Mehmoodabad Bulk WH"},{"code":"520103","name":"GHOTKI-2"},{"code":"520105","name":"GHOTKI BULK WH"}],"SUKKUR":[{"code":"520200","name":"ROHRI-2"},{"code":"520204","name":"PANNU AAQIL-1 WH"},{"code":"520206","name":"SALEHPAT WH"},{"code":"520207","name":"ROHRI-3 WH"},{"code":"520208","name":"Sukkur Industrial WH"},{"code":"520303","name":"Dera Murad Jamali WH"},{"code":"520402","name":"KHUMB WH"},{"code":"520406","name":"SITHARJA WH"},{"code":"520501","name":"SHIKAR PUR WH"},{"code":"520605","name":"Larkana WH"},{"code":"520705","name":"MEHAR WH"},{"code":"520801","name":"MORO WH"},{"code":"520809","name":"Mehrabpur-3 WH"},{"code":"520810","name":"BHIRIA ROAD-2 WH"},{"code":"530203","name":"QUETTA2 WH"},{"code":"530205","name":"QUETTA-3 WH"},{"code":"531001","name":"KHUZDAR1 WH"}]}};
