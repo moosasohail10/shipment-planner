@@ -560,3 +560,53 @@ function fetchDashboard() {
 // Trigger fetch when button is clicked or tab is opened
 if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDashboard);
 document.getElementById('btn-dashboard').addEventListener('click', fetchDashboard);
+
+// --- 8. SEARCH & EXPORT ENHANCEMENTS ---
+
+// Search Filter Logic for ID Tracker
+const searchInput = document.getElementById('search-tracker');
+if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#tracker-body tr');
+        
+        rows.forEach(row => {
+            // Check if the row contains the search text
+            let rowText = row.textContent.toLowerCase();
+            if (rowText.includes(filter)) {
+                row.style.display = ''; // Show row
+            } else {
+                row.style.display = 'none'; // Hide row
+            }
+        });
+    });
+}
+
+// Export to CSV Logic for Dashboard
+const exportBtn = document.getElementById('export-csv');
+if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
+        let csv = [];
+        // Grab the dashboard table
+        let rows = document.querySelectorAll('#dashboard-table tr');
+        
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll('td, th');
+            for (let j = 0; j < cols.length; j++) {
+                // Wrap text in quotes to prevent issues with commas in the data
+                row.push('"' + cols[j].innerText.replace(/"/g, '""') + '"');
+            }
+            csv.push(row.join(','));
+        }
+        
+        // Create a downloadable file link
+        let csvString = csv.join('\n');
+        let downloadLink = document.createElement('a');
+        downloadLink.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvString);
+        downloadLink.target = '_blank';
+        downloadLink.download = 'Fatima_Fertilizer_Disbursement_Report.csv';
+        
+        // Trigger the download
+        downloadLink.click();
+    });
+}

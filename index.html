@@ -98,29 +98,35 @@
             <p id="form-message" class="hidden-message"></p>
         </section>
 
-        <!-- Placeholder Sections for the other tabs -->
+        <!-- Stage 02: ID Tracker -->
         <section id="tab-tracker" class="tab-content">
-    <h3>02. ID Generation & Tracker</h3>
-    <button id="refresh-tracker" class="submit-btn" style="margin-bottom: 15px;">Refresh Live Data</button>
-    <div class="table-container">
-        <table id="tracker-table">
-            <thead>
-                <tr>
-                    <th>Shipment ID</th>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Destination</th>
-                    <th>Current Stage</th>
-                </tr>
-            </thead>
-            <tbody id="tracker-body">
-                <tr>
-                    <td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
+            <h3>02. ID Generation & Tracker</h3>
+            <button id="refresh-tracker" class="submit-btn" style="margin-bottom: 15px;">Refresh Live Data</button>
+            
+            <!-- NEW: Search Bar -->
+            <input type="text" id="search-tracker" placeholder="🔍 Search by ID, Product, or Location..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem;">
+            
+            <div class="table-container">
+                <table id="tracker-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Destination</th>
+                            <th>Current Stage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tracker-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Stage 03: Coordinator Queue -->
         <section id="tab-queue" class="tab-content">
             <h3>03. Coordinator Queue</h3>
             <p style="margin-bottom: 10px;">Assign incoming requests to specific Plant Teams.</p>
@@ -146,6 +152,7 @@
             <p id="queue-message" class="hidden-message"></p>
         </section>
 
+        <!-- Stage 04: Plant Fulfillment -->
         <section id="tab-plant" class="tab-content">
             <h3>04. Plant Fulfillment</h3>
             <p style="margin-bottom: 10px;">Execute loading and confirm batch for FIFO compliance.</p>
@@ -170,10 +177,12 @@
             </div>
             <p id="plant-message" class="hidden-message"></p>
         </section>
-       <section id="tab-dashboard" class="tab-content">
+        
+        <!-- Stage 05: Dashboard & Summaries -->
+        <section id="tab-dashboard" class="tab-content">
             <h3>05. Disbursement Dashboard & Summaries</h3>
 
-            <!-- NEW: Summary Blocks -->
+            <!-- Summary Blocks -->
             <div id="summary-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 250px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
                     <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Summary (Tons)</h4>
@@ -186,7 +195,13 @@
             </div>
 
             <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
-            <button id="refresh-dashboard" class="submit-btn" style="margin-bottom: 15px;">Load Live Dashboard</button>
+            
+            <!-- Dashboard Buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="refresh-dashboard" class="submit-btn" style="flex: 1; margin: 0;">Load Live Dashboard</button>
+                <button id="export-csv" class="submit-btn" style="flex: 1; margin: 0; background-color: #0e3b24;">📥 Export to Excel</button>
+            </div>
+            
             <div class="table-container">
                 <table id="dashboard-table">
                     <thead>
@@ -200,11 +215,12 @@
                     </thead>
                     <tbody id="dashboard-body">
                         <tr>
-                            <td colspan="5" style="text-align: center;">Click "Load Dispatched Shipments" to view records.</td>
+                            <td colspan="5" style="text-align: center;">Click "Load Live Dashboard" to view records.</td>
                         </tr>
                     </tbody>
                 </table>
-            </div></section>
+            </div>
+        </section>
     </main>
     </div> <!-- Closes the main-app wrapper -->
 
