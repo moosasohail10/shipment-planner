@@ -6,12 +6,31 @@
     <title>Shipment Planning System</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Global Background Application */
+        body {
+            background-image: url('Background Image.jpg');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        /* Make containers slightly transparent white so the background peeks through while text remains readable */
+        .app-container {
+            background-color: rgba(255, 255, 255, 0.95) !important; 
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
     <div id="toast-container"></div>
 
     <div id="login-screen" class="app-container" style="margin-top: 50px;">
-        <h2 style="text-align: center; color: #1a5c3a; margin-bottom: 20px;">Fatima Fertilizer Login</h2>
+        <!-- Corporate Login Logo -->
+        <img src="Fatima Fertilizer Logo.png" alt="Fatima Fertilizer Logo" style="max-width: 250px; display: block; margin: 0 auto 20px auto;">
+        
+        <h2 style="text-align: center; color: #1a5c3a; margin-bottom: 20px;">Supply Chain Login</h2>
         <form id="login-form">
             <div class="input-group">
                 <label for="login-user">Username</label>
@@ -29,7 +48,11 @@
     <div id="main-app" style="display: none;">
     <header>
             <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
-                <h2>Shipment Planner</h2>
+                <!-- Corporate App Header Logo -->
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="Fatima Fertilizer Logo.png" alt="Fatima Fertilizer Logo" style="height: 40px; background: white; padding: 2px 8px; border-radius: 4px;">
+                    <h2 style="margin: 0; color: white;">Shipment Planner</h2>
+                </div>
                 <button id="btn-logout" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Logout</button>
             </div>
             <div class="nav-tabs">
@@ -49,7 +72,6 @@
         <section id="tab-request" class="tab-content active">
             <h3>01. Initiate Shipment</h3>
             <form id="sales-form">
-                
                 <div class="input-group">
                     <label for="shipment-type">Shipment Type</label>
                     <select id="shipment-type" required>
@@ -57,7 +79,6 @@
                         <option value="Transshipment">Transshipment (WH to WH)</option>
                     </select>
                 </div>
-
                 <div class="input-group">
                     <label for="product">Product Type</label>
                     <select id="product" required>
@@ -70,19 +91,14 @@
                         <option value="PFL CAN F">PFL CAN F</option>
                     </select>
                 </div>
-                
                 <div class="input-group">
                     <label for="qty">Total Quantity (Tons)</label>
                     <input type="number" id="qty" placeholder="e.g., 500" required>
                 </div>
-
-                <!-- NEW: Daily Requirement -->
                 <div class="input-group">
                     <label for="daily-req">Daily Requirement (Tons)</label>
                     <input type="number" id="daily-req" placeholder="e.g., 50" required>
                 </div>
-
-                <!-- NEW: Shipment Purpose -->
                 <div class="input-group">
                     <label for="shipment-purpose">Shipment Purpose</label>
                     <select id="shipment-purpose" required>
@@ -92,8 +108,6 @@
                         <option value="Both">Both</option>
                     </select>
                 </div>
-
-                <!-- NEW: Conditional Quantities (Hidden by default) -->
                 <div id="both-quantities" style="display: none; gap: 10px; margin-bottom: 15px;">
                     <div class="input-group" style="flex: 1; margin-bottom: 0;">
                         <label for="containment-qty">Containment Qty</label>
@@ -104,28 +118,24 @@
                         <input type="number" id="diversion-qty" placeholder="0">
                     </div>
                 </div>
-
                 <div class="input-group">
                     <label for="zone">Destination Zone</label>
                     <select id="zone" required>
                         <option value="">Select Zone...</option>
                     </select>
                 </div>
-
                 <div class="input-group">
                     <label for="region">Destination Region</label>
                     <select id="region" required>
                         <option value="">Select Region...</option>
                     </select>
                 </div>
-
                 <div class="input-group">
                     <label for="location">Destination Warehouse</label>
                     <select id="location" required>
                         <option value="">Select Warehouse...</option>
                     </select>
                 </div>
-
                 <button type="submit" class="submit-btn">Submit Request</button>
             </form>
             <p id="form-message" class="hidden-message"></p>
@@ -144,7 +154,7 @@
                             <th>Product</th>
                             <th>Qty</th>
                             <th>Destination</th>
-                            <th>Action</th>
+                            <th>Action (Approve / Reject)</th>
                         </tr>
                     </thead>
                     <tbody id="approve-body">
@@ -167,11 +177,12 @@
                             <th>Product</th>
                             <th>Qty</th>
                             <th>Destination</th>
+                            <th>Remarks</th>
                             <th>Current Stage</th>
                         </tr>
                     </thead>
                     <tbody id="tracker-body">
-                        <tr><td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td></tr>
+                        <tr><td colspan="6" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -267,7 +278,7 @@
             </div>
             
             <div class="table-container" style="overflow-x: auto;">
-                <table id="dashboard-table" style="min-width: 900px;"> <!-- Made wider to fit new columns -->
+                <table id="dashboard-table" style="min-width: 1000px;"> <!-- Expanded for TAT -->
                     <thead>
                         <tr>
                             <th>Shipment ID</th>
@@ -278,11 +289,12 @@
                             <th>Daily Req</th>
                             <th>Source</th>
                             <th>Purpose</th>
+                            <th>TAT (Hrs)</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-body">
-                        <tr><td colspan="9" style="text-align: center;">Click "Load Live Dashboard" to view records.</td></tr>
+                        <tr><td colspan="10" style="text-align: center;">Click "Load Live Dashboard" to view records.</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -128,7 +128,6 @@ regionSelect.addEventListener("change", function() {
     }
 });
 
-// NEW: Toggle "Both" Quantity Fields
 document.getElementById('shipment-purpose').addEventListener('change', function() {
     const bothDiv = document.getElementById('both-quantities');
     if (this.value === 'Both') {
@@ -142,25 +141,22 @@ document.getElementById('shipment-purpose').addEventListener('change', function(
     }
 });
 
-// --- 2. FORM SUBMISSION LOGIC (WITH MATH VALIDATION) ---
+// --- 2. FORM SUBMISSION LOGIC ---
 const salesForm = document.getElementById('sales-form');
 const submitBtn = document.querySelector('.submit-btn');
 
 salesForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    
-    // NEW: Validation for "Both"
     let purpose = document.getElementById('shipment-purpose').value;
     let totalQty = parseFloat(document.getElementById('qty').value) || 0;
-    let contQty = 0;
-    let divQty = 0;
+    let contQty = 0; let divQty = 0;
 
     if (purpose === 'Both') {
         contQty = parseFloat(document.getElementById('containment-qty').value) || 0;
         divQty = parseFloat(document.getElementById('diversion-qty').value) || 0;
         if ((contQty + divQty) > totalQty) {
             showToast("Error: Containment + Diversion Qty cannot exceed Total Qty!", "error");
-            return; // Stop submission
+            return; 
         }
     }
 
@@ -172,31 +168,21 @@ salesForm.addEventListener('submit', function(e) {
     const uniqueId = "FAT-" + dateString + "-" + (Math.floor(Math.random() * 900) + 100);
 
     const payload = {
-        uid: uniqueId,
-        productType: document.getElementById('product').value,
-        dailyQty: document.getElementById('qty').value, // Total Qty
-        location: document.getElementById('location').value,
-        zone: document.getElementById('zone').value,
-        region: document.getElementById('region').value,
-        shipmentType: document.getElementById('shipment-type').value, 
-        stage: "01. Pending RDM Approval",
-        // New Fields
-        dailyRequirement: document.getElementById('daily-req').value,
-        shipmentPurpose: purpose,
-        containmentQty: contQty,
-        diversionQty: divQty
+        uid: uniqueId, productType: document.getElementById('product').value, dailyQty: document.getElementById('qty').value, 
+        location: document.getElementById('location').value, zone: document.getElementById('zone').value, region: document.getElementById('region').value,
+        shipmentType: document.getElementById('shipment-type').value, stage: "01. Pending RDM Approval",
+        dailyRequirement: document.getElementById('daily-req').value, shipmentPurpose: purpose, containmentQty: contQty, diversionQty: divQty
     };
 
     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     .then(() => {
         showToast("Success! ID: " + uniqueId + " sent for RDM Approval.", "success");
-        salesForm.reset(); 
-        document.getElementById('both-quantities').style.display = 'none'; // reset UI
+        salesForm.reset(); document.getElementById('both-quantities').style.display = 'none'; 
         regionSelect.innerHTML = '<option value="">Select Region...</option>'; warehouseSelect.innerHTML = '<option value="">Select Warehouse...</option>';
     }).catch(() => { showToast("Error saving request.", "error"); }).finally(() => { submitBtn.textContent = 'Submit Request'; submitBtn.disabled = false; });
 });
 
-// --- 3. RDM APPROVAL LOGIC ---
+// --- 3. RDM APPROVAL & REJECTION LOGIC ---
 const approveBody = document.getElementById('approve-body');
 document.getElementById('btn-approve').addEventListener('click', function() {
     approveBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading RDM approvals...</td></tr>';
@@ -208,8 +194,7 @@ document.getElementById('btn-approve').addEventListener('click', function() {
             if (currentUserRole.includes("Regional Distribution Manager")) {
                 let userRegion = currentUserRole.replace("Regional Distribution Manager ", "").trim().toUpperCase();
                 return (s.Region || s.region || "").toUpperCase() === userRegion;
-            }
-            return false;
+            } return false;
         });
         
         if (rdmShipments.length === 0) { approveBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending approvals!</td></tr>'; return; }
@@ -220,20 +205,37 @@ document.getElementById('btn-approve').addEventListener('click', function() {
             let prodDisplay = type === "Transshipment" ? `${shipment.Product_Type}<br><small style="color:#d35400;font-weight:bold;">[Transshipment]</small>` : shipment.Product_Type;
             let shortLoc = (shipment.Warehouse_Location || shipment.location).split(" - ")[0];
 
+            // Added Input for Remarks and a Reject Button
             approveBody.innerHTML += `<tr>
                 <td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${shipment.Daily_Qty}</td><td>${shortLoc}</td>
-                <td><button onclick="approveRDM('${uid}')" style="background:#1a5c3a; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">Approve</button></td>
+                <td>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <input type="text" id="remark-rdm-${uid}" placeholder="Remarks (Required for Rejection)" style="padding:4px; font-size:0.8rem; border-radius:4px; border:1px solid #ccc;">
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="approveRDM('${uid}')" style="background:#1a5c3a; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Approve</button>
+                            <button onclick="rejectRDM('${uid}')" style="background:#dc3545; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; flex:1;">Reject</button>
+                        </div>
+                    </div>
+                </td>
             </tr>`;
         });
     });
 });
 
 window.approveRDM = function(uid) {
-    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "02. Coordinator Queue" }) })
+    let rem = document.getElementById(`remark-rdm-${uid}`).value || "Approved without remarks";
+    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "02. Coordinator Queue", remarks: rem }) })
     .then(() => { showToast(`Shipment ${uid} approved!`, "success"); setTimeout(() => document.getElementById('btn-approve').click(), 1500); });
 };
 
-// --- 4. ZONAL COORDINATOR QUEUE ---
+window.rejectRDM = function(uid) {
+    let rem = document.getElementById(`remark-rdm-${uid}`).value;
+    if (!rem) { alert("Please provide a remark explaining the rejection."); return; }
+    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "Rejected", remarks: rem }) })
+    .then(() => { showToast(`Shipment ${uid} Rejected.`, "error"); setTimeout(() => document.getElementById('btn-approve').click(), 1500); });
+};
+
+// --- 4. ZONAL COORDINATOR QUEUE & REJECTION ---
 const queueBody = document.getElementById('queue-body');
 document.getElementById('btn-queue').addEventListener('click', function() {
     queueBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading queue...</td></tr>';
@@ -245,8 +247,7 @@ document.getElementById('btn-queue').addEventListener('click', function() {
             if (currentUserRole.includes("Zonal Sales Coordinator")) {
                 let userZone = currentUserRole.replace("Zonal Sales Coordinator ", "").trim().toUpperCase();
                 return (s.Zone || s.zone || "").toUpperCase().includes(userZone);
-            }
-            return false;
+            } return false;
         });
         
         if (pendingShipments.length === 0) { queueBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending requests!</td></tr>'; return; }
@@ -258,13 +259,30 @@ document.getElementById('btn-queue').addEventListener('click', function() {
 
             let actionCol = "";
             if (type === "Transshipment") {
-                actionCol = `<td><em>Route to WH Officer</em></td>
-                             <td><button onclick="routeTransshipment('${uid}')" style="background:#d35400; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">Route</button></td>`;
+                actionCol = `
+                    <td>
+                        <em style="display:block; margin-bottom:6px;">Route to WH Officer</em>
+                        <input type="text" id="remark-coord-${uid}" placeholder="Remarks (Required for Rejection)" style="padding:4px; font-size:0.8rem; width:100%; border-radius:4px; border:1px solid #ccc;">
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:6px; flex-direction:column;">
+                            <button onclick="routeTransshipment('${uid}')" style="background:#d35400; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer;">Route</button>
+                            <button onclick="rejectCoord('${uid}')" style="background:#dc3545; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer;">Reject</button>
+                        </div>
+                    </td>`;
             } else {
-                actionCol = `<td><select id="plant-select-${uid}" style="padding: 6px; font-size: 0.9rem;"><option value="">Select Plant...</option><option value="Sadiqabad Plant">Sadiqabad Plant</option><option value="Multan Plant">Multan Plant</option><option value="Sheikhupura Plant">Sheikhupura Plant</option></select></td>
-                             <td><button onclick="assignPlant('${uid}')" style="background:#f9a826; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer;">Assign</button></td>`;
+                actionCol = `
+                    <td>
+                        <select id="plant-select-${uid}" style="padding:4px; font-size:0.8rem; margin-bottom:6px; width:100%; border-radius:4px;"><option value="">Select Plant...</option><option value="Sadiqabad Plant">Sadiqabad Plant</option><option value="Multan Plant">Multan Plant</option><option value="Sheikhupura Plant">Sheikhupura Plant</option></select>
+                        <input type="text" id="remark-coord-${uid}" placeholder="Remarks (Required for Rejection)" style="padding:4px; font-size:0.8rem; width:100%; border-radius:4px; border:1px solid #ccc;">
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:6px; flex-direction:column;">
+                            <button onclick="assignPlant('${uid}')" style="background:#f9a826; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer;">Assign</button>
+                            <button onclick="rejectCoord('${uid}')" style="background:#dc3545; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer;">Reject</button>
+                        </div>
+                    </td>`;
             }
-
             queueBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${shipment.Daily_Qty}</td>${actionCol}</tr>`;
         });
     });
@@ -272,14 +290,23 @@ document.getElementById('btn-queue').addEventListener('click', function() {
 
 window.assignPlant = function(uid) {
     const p = document.getElementById(`plant-select-${uid}`).value;
+    let rem = document.getElementById(`remark-coord-${uid}`).value || "Assigned without remarks";
     if (!p) { alert("Select a Plant!"); return; }
-    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "03. Plant Fulfillment", assignedPlant: p }) })
+    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "03. Plant Fulfillment", assignedPlant: p, remarks: rem }) })
     .then(() => { showToast(`Assigned ${uid} to ${p}!`, "success"); setTimeout(() => document.getElementById('btn-queue').click(), 1500); });
 };
 
 window.routeTransshipment = function(uid) {
-    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "03. WH Transshipment", assignedPlant: "Transshipment" }) })
+    let rem = document.getElementById(`remark-coord-${uid}`).value || "Routed without remarks";
+    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "03. WH Transshipment", assignedPlant: "Transshipment", remarks: rem }) })
     .then(() => { showToast(`Routed ${uid} to WH Officer!`, "success"); setTimeout(() => document.getElementById('btn-queue').click(), 1500); });
+};
+
+window.rejectCoord = function(uid) {
+    let rem = document.getElementById(`remark-coord-${uid}`).value;
+    if (!rem) { alert("Please provide a remark explaining the rejection."); return; }
+    fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "Rejected", remarks: rem }) })
+    .then(() => { showToast(`Shipment ${uid} Rejected.`, "error"); setTimeout(() => document.getElementById('btn-queue').click(), 1500); });
 };
 
 // --- 5. PLANT FULFILLMENT LOGIC ---
@@ -295,8 +322,7 @@ document.getElementById('btn-plant').addEventListener('click', function() {
             if (currentUserRole.includes("Plant Logistics")) {
                 let userPlantCity = currentUserRole.split(" ").pop().toUpperCase();
                 return (s.Assigned_Plant || s.assignedPlant || "").toUpperCase().includes(userPlantCity);
-            }
-            return false;
+            } return false;
         });
         
         if (plantShipments.length === 0) { plantBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending loads!</td></tr>'; return; }
@@ -326,13 +352,11 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
         const tsShipments = data.data.filter(s => {
             let stage = s.Stage || s.stage || "";
             if ((s.Shipment_Type || s.shipmentType) !== "Transshipment") return false;
-            
             if (currentUserRole === "Super Admin") return stage === "03. WH Transshipment" || stage === "04. Transshipment Quotation";
             if (currentUserRole === "WH Transshipment Officer") return stage === "03. WH Transshipment";
             if (currentUserRole.includes("Plant Logistics")) return stage === "04. Transshipment Quotation";
             return false;
         });
-        
         if (tsShipments.length === 0) { tsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pending transshipments!</td></tr>'; return; }
 
         let whOptions = '<option value="">Select Source WH...</option>';
@@ -354,7 +378,6 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
                 sourceHtml = `<strong>${srcWh.split(" - ")[0]}</strong>`; 
                 actionHtml = `<button onclick="dispatchTransshipment('${uid}')" style="background:#1a5c3a; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Dispatch</button>`;
             }
-
             tsBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${s.Product_Type}</td><td>${s.Daily_Qty}</td><td>${destLoc}</td><td>${sourceHtml}</td><td>${actionHtml}</td></tr>`;
         });
     });
@@ -372,10 +395,10 @@ window.dispatchTransshipment = function(uid) {
     .then(() => { showToast(`Transshipment ${uid} Dispatched!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
 };
 
-// --- 7. ID TRACKER LOGIC ---
+// --- 7. ID TRACKER LOGIC (Shows Remarks & Rejection Badge) ---
 const trackerBody = document.getElementById('tracker-body');
 document.getElementById('btn-tracker').addEventListener('click', function() {
-    trackerBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading live data...</td></tr>';
+    trackerBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading live data...</td></tr>';
     fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
         trackerBody.innerHTML = ''; 
         data.data.reverse().forEach(s => {
@@ -383,15 +406,20 @@ document.getElementById('btn-tracker').addEventListener('click', function() {
             let type = s.Shipment_Type || s.shipmentType || "Plant Shipment";
             let prodDisplay = type === "Transshipment" ? `${s.Product_Type}<br><small style="color:#d35400;">[Transshipment]</small>` : s.Product_Type;
             let shortLoc = (s.Warehouse_Location || s.location || "N/A").split(" - ")[0];
-            trackerBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${s.Daily_Qty}</td><td>${shortLoc}</td><td><span class="stage-badge">${s.Stage || s.stage}</span></td></tr>`;
+            
+            // Rejection Badge & Remarks
+            let stageBadge = (s.Stage || s.stage) === "Rejected" ? `<span class="stage-badge" style="background:#dc3545; color:white;">Rejected</span>` : `<span class="stage-badge">${s.Stage || s.stage}</span>`;
+            let remarksDisplay = s.Remarks || s.remarks || "-";
+
+            trackerBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${s.Daily_Qty}</td><td>${shortLoc}</td><td><small>${remarksDisplay}</small></td><td>${stageBadge}</td></tr>`;
         });
     });
 });
 
-// --- 8. DASHBOARD LOGIC (NEW UNIFIED EXPORT FORMAT) ---
+// --- 8. DASHBOARD LOGIC (WITH SLA / TAT CALCULATION) ---
 const dashboardBody = document.getElementById('dashboard-body');
 document.getElementById('btn-dashboard').addEventListener('click', function() {
-    dashboardBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading records...</td></tr>';
+    dashboardBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading records...</td></tr>';
     fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
         let prodTotals = {}; let regTotals = {};
         
@@ -411,7 +439,7 @@ document.getElementById('btn-dashboard').addEventListener('click', function() {
 
         dashboardBody.innerHTML = ''; 
         const disbursedShipments = data.data.filter(s => (s.Stage || s.stage) === "05. Disbursement");
-        if (disbursedShipments.length === 0) { dashboardBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No completed shipments yet!</td></tr>'; return; }
+        if (disbursedShipments.length === 0) { dashboardBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No completed shipments yet!</td></tr>'; return; }
 
         disbursedShipments.reverse().forEach(s => {
             let uid = s.UID || s.uid;
@@ -420,24 +448,25 @@ document.getElementById('btn-dashboard').addEventListener('click', function() {
             let dailyReq = s.Daily_Requirement || s.dailyRequirement || "N/A";
             let sourceLoc = type === "Transshipment" ? (s.Source_WH || s.sourceWh || "").split(" - ")[0] : (s.Assigned_Plant || s.assignedPlant || "Plant");
             
-            // Format Purpose carefully so the Excel export formats nicely on one line
             let purposeDisplay = s.Shipment_Purpose || s.shipmentPurpose || "N/A";
             if (purposeDisplay === "Both") {
-                let cq = s.Containment_Qty || s.containmentQty || 0;
-                let dq = s.Diversion_Qty || s.diversionQty || 0;
+                let cq = s.Containment_Qty || s.containmentQty || 0; let dq = s.Diversion_Qty || s.diversionQty || 0;
                 purposeDisplay = `Both (Cont: ${cq} | Div: ${dq})`;
             }
 
+            // DYNAMIC TAT CALCULATION
+            let initTime = new Date(s.Timestamp || s.timestamp);
+            let dispTime = new Date(s.Dispatch_Time || s.dispatchTime || s.Dispatch_Time); 
+            let tatDisplay = "N/A";
+            if (initTime.toString() !== "Invalid Date" && dispTime.toString() !== "Invalid Date") {
+                let diffHours = Math.abs(dispTime - initTime) / 36e5; // Convert milliseconds to hours
+                tatDisplay = diffHours.toFixed(1);
+            }
+
             dashboardBody.innerHTML += `<tr>
-                <td><strong>${uid}</strong></td>
-                <td>${type}</td>
-                <td>${destLoc}</td>
-                <td>${s.Product_Type}</td>
-                <td>${s.Daily_Qty}</td>
-                <td>${dailyReq}</td>
-                <td>${sourceLoc}</td>
-                <td>${purposeDisplay}</td>
-                <td><span class="stage-badge" style="background:#28a745; color:white;">Completed</span></td>
+                <td><strong>${uid}</strong></td><td>${type}</td><td>${destLoc}</td><td>${s.Product_Type}</td>
+                <td>${s.Daily_Qty}</td><td>${dailyReq}</td><td>${sourceLoc}</td><td>${purposeDisplay}</td>
+                <td><strong>${tatDisplay}</strong></td><td><span class="stage-badge" style="background:#28a745; color:white;">Completed</span></td>
             </tr>`;
         });
     });
@@ -449,7 +478,6 @@ document.getElementById('search-tracker').addEventListener('keyup', function() {
     document.querySelectorAll('#tracker-body tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none');
 });
 
-// The Excel Export function automatically reads the new 9 columns built above!
 document.getElementById('export-csv').addEventListener('click', function() {
     let csv = [];
     document.querySelectorAll('#dashboard-table tr').forEach(row => {
