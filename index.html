@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipment Planning System</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Load Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
-    <!-- LOGIN SCREEN -->
     <div id="login-screen" class="app-container" style="margin-top: 50px;">
         <h2 style="text-align: center; color: #1a5c3a; margin-bottom: 20px;">Fatima Fertilizer Login</h2>
         <form id="login-form">
@@ -29,10 +26,7 @@
         </form>
     </div>
 
-    <!-- WRAPPER: HIDES THE APP UNTIL LOGIN IS SUCCESSFUL -->
     <div id="main-app" style="display: none;">
-
-    <!-- Header & Navigation -->
     <header>
             <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 15px;">
                 <h2>Shipment Planner</h2>
@@ -40,15 +34,15 @@
             </div>
             <div class="nav-tabs">
             <button class="tab-btn active" id="btn-request">Sales Request</button>
-            <button class="tab-btn" id="btn-approve">RDM Approval</button> <!-- NEW TAB -->
+            <button class="tab-btn" id="btn-approve">RDM Approval</button>
             <button class="tab-btn" id="btn-tracker">ID Tracker</button>
             <button class="tab-btn" id="btn-queue">Coordinator</button>
             <button class="tab-btn" id="btn-plant">Plant</button>
+            <button class="tab-btn" id="btn-transshipment">Transshipment</button>
             <button class="tab-btn" id="btn-dashboard">Dashboard</button>
         </div>
     </header>
 
-    <!-- Main App Container -->
     <main class="app-container">
 
         <!-- Stage 01: Sales Request Form -->
@@ -56,6 +50,14 @@
             <h3>01. Initiate Shipment</h3>
             <form id="sales-form">
                 
+                <div class="input-group">
+                    <label for="shipment-type">Shipment Type</label>
+                    <select id="shipment-type" required>
+                        <option value="Plant Shipment">Plant Shipment</option>
+                        <option value="Transshipment">Transshipment (WH to WH)</option>
+                    </select>
+                </div>
+
                 <div class="input-group">
                     <label for="product">Product Type</label>
                     <select id="product" required>
@@ -75,14 +77,14 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="zone">Zone</label>
+                    <label for="zone">Destination Zone</label>
                     <select id="zone" required>
                         <option value="">Select Zone...</option>
                     </select>
                 </div>
 
                 <div class="input-group">
-                    <label for="region">Sales Region</label>
+                    <label for="region">Destination Region</label>
                     <select id="region" required>
                         <option value="">Select Region...</option>
                     </select>
@@ -100,7 +102,7 @@
             <p id="form-message" class="hidden-message"></p>
         </section>
 
-        <!-- Stage 01b: RDM Approval (NEW SECTION) -->
+        <!-- Stage 01b: RDM Approval -->
         <section id="tab-approve" class="tab-content">
             <h3>RDM Approval Queue</h3>
             <p style="margin-bottom: 10px;">Review and approve regional sales requests.</p>
@@ -117,22 +119,17 @@
                         </tr>
                     </thead>
                     <tbody id="approve-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">Click "Check Pending Approvals" to load.</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align: center;">Click "Check Pending Approvals" to load.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p id="approve-message" class="hidden-message"></p>
         </section>
 
         <!-- Stage 02: ID Tracker -->
         <section id="tab-tracker" class="tab-content">
             <h3>02. ID Generation & Tracker</h3>
             <button id="refresh-tracker" class="submit-btn" style="margin-bottom: 15px;">Refresh Live Data</button>
-            
             <input type="text" id="search-tracker" placeholder="🔍 Search by ID, Product, or Location..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem;">
-            
             <div class="table-container">
                 <table id="tracker-table">
                     <thead>
@@ -145,9 +142,7 @@
                         </tr>
                     </thead>
                     <tbody id="tracker-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align: center;">Click "Refresh Live Data" to load shipments.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -156,7 +151,7 @@
         <!-- Stage 03: Coordinator Queue -->
         <section id="tab-queue" class="tab-content">
             <h3>03. Coordinator Queue</h3>
-            <p style="margin-bottom: 10px;">Assign incoming requests to specific Plant Teams.</p>
+            <p style="margin-bottom: 10px;">Assign requests to Plants or Route Transshipments.</p>
             <button id="refresh-queue" class="submit-btn" style="margin-bottom: 15px;">Check for New Requests</button>
             <div class="table-container">
                 <table id="queue-table">
@@ -165,21 +160,18 @@
                             <th>Shipment ID</th>
                             <th>Product</th>
                             <th>Qty</th>
-                            <th>Assign To Plant</th>
+                            <th>Assign To Plant / Route</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="queue-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">Click "Check for New Requests" to load queue.</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align: center;">Click "Check for New Requests" to load queue.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p id="queue-message" class="hidden-message"></p>
         </section>
 
-        <!-- Stage 04: Plant Fulfillment -->
+        <!-- Stage 04a: Plant Fulfillment (Plant Shipments Only) -->
         <section id="tab-plant" class="tab-content">
             <h3>04. Plant Fulfillment</h3>
             <p style="margin-bottom: 10px;">Execute loading and confirm batch for FIFO compliance.</p>
@@ -196,20 +188,39 @@
                         </tr>
                     </thead>
                     <tbody id="plant-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">Click "Check Assigned Loads" to view queue.</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align: center;">Click "Check Assigned Loads" to view queue.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p id="plant-message" class="hidden-message"></p>
+        </section>
+
+        <!-- Stage 04b: Transshipment (NEW SECTION) -->
+        <section id="tab-transshipment" class="tab-content">
+            <h3>WH Transshipment Execution</h3>
+            <p style="margin-bottom: 10px;">Assign Source WH and Execute Quotations.</p>
+            <button id="refresh-transshipment" class="submit-btn" style="margin-bottom: 15px;">Refresh Transshipments</button>
+            <div class="table-container">
+                <table id="transshipment-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Destination WH</th>
+                            <th>Source WH</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transshipment-body">
+                        <tr><td colspan="6" style="text-align: center;">Click "Refresh" to view queue.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
         
         <!-- Stage 05: Dashboard & Summaries -->
         <section id="tab-dashboard" class="tab-content">
             <h3>05. Disbursement Dashboard & Summaries</h3>
-
-            <!-- Summary Blocks -->
             <div id="summary-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; text-align: center;">
                     <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Volume (Tons)</h4>
@@ -221,9 +232,6 @@
                 </div>
             </div>
 
-            <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
-            
-            <!-- Dashboard Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <button id="refresh-dashboard" class="submit-btn" style="flex: 1; margin: 0;">Load Live Dashboard</button>
                 <button id="export-csv" class="submit-btn" style="flex: 1; margin: 0; background-color: #0e3b24;">📥 Export to Excel</button>
@@ -236,22 +244,18 @@
                             <th>Shipment ID</th>
                             <th>Product</th>
                             <th>Qty</th>
-                            <th>Destination</th>
+                            <th>Route (Src ➔ Dest)</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center;">Click "Load Live Dashboard" to view records.</td>
-                        </tr>
+                        <tr><td colspan="5" style="text-align: center;">Click "Load Live Dashboard" to view records.</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
     </main>
-    </div> <!-- Closes the main-app wrapper -->
-
-    <!-- Link to our JavaScript file -->
+    </div> 
     <script src="app.js"></script>
 </body>
 </html>
