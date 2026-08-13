@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shipment Planning System</title>
     <link rel="stylesheet" href="style.css">
-    <!-- NEW: Load Chart.js -->
+    <!-- Load Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
-    <!-- NEW: LOGIN SCREEN -->
+    <!-- LOGIN SCREEN -->
     <div id="login-screen" class="app-container" style="margin-top: 50px;">
         <h2 style="text-align: center; color: #1a5c3a; margin-bottom: 20px;">Fatima Fertilizer Login</h2>
         <form id="login-form">
@@ -40,6 +40,7 @@
             </div>
             <div class="nav-tabs">
             <button class="tab-btn active" id="btn-request">Sales Request</button>
+            <button class="tab-btn" id="btn-approve">RDM Approval</button> <!-- NEW TAB -->
             <button class="tab-btn" id="btn-tracker">ID Tracker</button>
             <button class="tab-btn" id="btn-queue">Coordinator</button>
             <button class="tab-btn" id="btn-plant">Plant</button>
@@ -55,7 +56,6 @@
             <h3>01. Initiate Shipment</h3>
             <form id="sales-form">
                 
-                <!-- Updated Product Dropdown -->
                 <div class="input-group">
                     <label for="product">Product Type</label>
                     <select id="product" required>
@@ -69,13 +69,11 @@
                     </select>
                 </div>
                 
-                <!-- Updated Quantity Label -->
                 <div class="input-group">
                     <label for="qty">Total Quantity (Tons)</label>
                     <input type="number" id="qty" placeholder="e.g., 500" required>
                 </div>
 
-                <!-- Cascading Dropdowns for Location -->
                 <div class="input-group">
                     <label for="zone">Zone</label>
                     <select id="zone" required>
@@ -102,12 +100,37 @@
             <p id="form-message" class="hidden-message"></p>
         </section>
 
+        <!-- Stage 01b: RDM Approval (NEW SECTION) -->
+        <section id="tab-approve" class="tab-content">
+            <h3>RDM Approval Queue</h3>
+            <p style="margin-bottom: 10px;">Review and approve regional sales requests.</p>
+            <button id="refresh-approve" class="submit-btn" style="margin-bottom: 15px;">Check Pending Approvals</button>
+            <div class="table-container">
+                <table id="approve-table">
+                    <thead>
+                        <tr>
+                            <th>Shipment ID</th>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Destination</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approve-body">
+                        <tr>
+                            <td colspan="5" style="text-align: center;">Click "Check Pending Approvals" to load.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="approve-message" class="hidden-message"></p>
+        </section>
+
         <!-- Stage 02: ID Tracker -->
         <section id="tab-tracker" class="tab-content">
             <h3>02. ID Generation & Tracker</h3>
             <button id="refresh-tracker" class="submit-btn" style="margin-bottom: 15px;">Refresh Live Data</button>
             
-            <!-- NEW: Search Bar -->
             <input type="text" id="search-tracker" placeholder="🔍 Search by ID, Product, or Location..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem;">
             
             <div class="table-container">
@@ -186,7 +209,7 @@
         <section id="tab-dashboard" class="tab-content">
             <h3>05. Disbursement Dashboard & Summaries</h3>
 
-          <!-- Summary Blocks with Charts -->
+            <!-- Summary Blocks -->
             <div id="summary-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; text-align: center;">
                     <h4 style="color: #1a5c3a; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">Product Volume (Tons)</h4>
@@ -197,6 +220,8 @@
                     <canvas id="regionChart" style="max-height: 220px;"></canvas>
                 </div>
             </div>
+
+            <p style="margin-bottom: 10px;">Review fully dispatched shipments and final records.</p>
             
             <!-- Dashboard Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
