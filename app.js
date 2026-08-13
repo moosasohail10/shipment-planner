@@ -186,7 +186,8 @@ salesForm.addEventListener('submit', function(e) {
 const approveBody = document.getElementById('approve-body');
 document.getElementById('btn-approve').addEventListener('click', function() {
     approveBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading RDM approvals...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED: ?t=...
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         approveBody.innerHTML = ''; 
         const rdmShipments = data.data.filter(s => {
             if ((s.Stage || s.stage) !== "01. Pending RDM Approval") return false;
@@ -205,7 +206,6 @@ document.getElementById('btn-approve').addEventListener('click', function() {
             let prodDisplay = type === "Transshipment" ? `${shipment.Product_Type}<br><small style="color:#d35400;font-weight:bold;">[Transshipment]</small>` : shipment.Product_Type;
             let shortLoc = (shipment.Warehouse_Location || shipment.location).split(" - ")[0];
 
-            // NEW: Parse and display Purpose
             let purposeDisplay = shipment.Shipment_Purpose || shipment.shipmentPurpose || "N/A";
             if (purposeDisplay === "Both") {
                 let cq = shipment.Containment_Qty || shipment.containmentQty || 0; 
@@ -247,7 +247,8 @@ window.rejectRDM = function(uid) {
 const queueBody = document.getElementById('queue-body');
 document.getElementById('btn-queue').addEventListener('click', function() {
     queueBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading queue...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         queueBody.innerHTML = ''; 
         const pendingShipments = data.data.filter(s => {
             if ((s.Stage || s.stage) !== "02. Coordinator Queue") return false;
@@ -321,7 +322,8 @@ window.rejectCoord = function(uid) {
 const plantBody = document.getElementById('plant-body');
 document.getElementById('btn-plant').addEventListener('click', function() {
     plantBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading plant assignments...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         plantBody.innerHTML = ''; 
         const plantShipments = data.data.filter(s => {
             if ((s.Stage || s.stage) !== "03. Plant Fulfillment") return false;
@@ -355,7 +357,8 @@ window.dispatchPlant = function(uid) {
 const tsBody = document.getElementById('transshipment-body');
 document.getElementById('btn-transshipment').addEventListener('click', function() {
     tsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading transshipments...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         tsBody.innerHTML = ''; 
         const tsShipments = data.data.filter(s => {
             let stage = s.Stage || s.stage || "";
@@ -363,7 +366,7 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
             
             if (currentUserRole === "Super Admin") return stage === "03. WH Transshipment" || stage === "04. Transshipment Quotation";
             if (currentUserRole === "WH Transshipment Officer") return stage === "03. WH Transshipment";
-            if (currentUserRole.includes("Plant Logistics")) return stage === "04. Transshipment Quotation"; // Global Visibility for all plants
+            if (currentUserRole.includes("Plant Logistics")) return stage === "04. Transshipment Quotation"; // Global Visibility
             return false;
         });
         
@@ -386,7 +389,6 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
                 actionHtml = `<button onclick="assignSourceWh('${uid}')" style="background:#f9a826; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Assign Source</button>`;
             } else if (stage === "04. Transshipment Quotation") {
                 sourceHtml = `<strong>${srcWh.split(" - ")[0]}</strong>`; 
-                // NEW: Transshipment action changed to "Accept Request" instead of Dispatch
                 actionHtml = `<button onclick="acceptTransshipment('${uid}')" style="background:#17a2b8; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Accept Request</button>`;
             }
 
@@ -402,17 +404,17 @@ window.assignSourceWh = function(uid) {
     .then(() => { showToast(`Assigned ${src} to ${uid}!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
 };
 
-// NEW: Accept Request Action
 window.acceptTransshipment = function(uid) {
     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "05. Disbursement" }) })
     .then(() => { showToast(`Transshipment ${uid} Accepted!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
 };
 
-// --- 7. ID TRACKER LOGIC (Shows Remarks & Rejection Badge) ---
+// --- 7. ID TRACKER LOGIC ---
 const trackerBody = document.getElementById('tracker-body');
 document.getElementById('btn-tracker').addEventListener('click', function() {
     trackerBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading live data...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         trackerBody.innerHTML = ''; 
         data.data.reverse().forEach(s => {
             let uid = s.UID || s.uid || "N/A";
@@ -420,7 +422,6 @@ document.getElementById('btn-tracker').addEventListener('click', function() {
             let prodDisplay = type === "Transshipment" ? `${s.Product_Type}<br><small style="color:#d35400;">[Transshipment]</small>` : s.Product_Type;
             let shortLoc = (s.Warehouse_Location || s.location || "N/A").split(" - ")[0];
             
-            // Rejection Badge & Remarks
             let stageBadge = (s.Stage || s.stage) === "Rejected" ? `<span class="stage-badge" style="background:#dc3545; color:white;">Rejected</span>` : `<span class="stage-badge">${s.Stage || s.stage}</span>`;
             let remarksDisplay = s.Remarks || s.remarks || "-";
 
@@ -429,11 +430,12 @@ document.getElementById('btn-tracker').addEventListener('click', function() {
     });
 });
 
-// --- 8. DASHBOARD LOGIC (WITH SLA / TAT CALCULATION) ---
+// --- 8. DASHBOARD LOGIC ---
 const dashboardBody = document.getElementById('dashboard-body');
 document.getElementById('btn-dashboard').addEventListener('click', function() {
     dashboardBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading records...</td></tr>';
-    fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
+    // CACHE BUSTER ADDED
+    fetch(GOOGLE_SCRIPT_URL + '?t=' + new Date().getTime()).then(r => r.json()).then(data => {
         let prodTotals = {}; let regTotals = {};
         
         data.data.forEach(s => {
@@ -467,12 +469,11 @@ document.getElementById('btn-dashboard').addEventListener('click', function() {
                 purposeDisplay = `Both (Cont: ${cq} | Div: ${dq})`;
             }
 
-            // DYNAMIC TAT CALCULATION
             let initTime = new Date(s.Timestamp || s.timestamp);
             let dispTime = new Date(s.Dispatch_Time || s.dispatchTime || s.Dispatch_Time); 
             let tatDisplay = "N/A";
             if (initTime.toString() !== "Invalid Date" && dispTime.toString() !== "Invalid Date") {
-                let diffHours = Math.abs(dispTime - initTime) / 36e5; // Convert milliseconds to hours
+                let diffHours = Math.abs(dispTime - initTime) / 36e5; 
                 tatDisplay = diffHours.toFixed(1);
             }
 
