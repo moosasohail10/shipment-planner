@@ -165,7 +165,7 @@ salesForm.addEventListener('submit', function(e) {
 
     const date = new Date();
     const dateString = date.getFullYear().toString() + (date.getMonth() + 1).toString().padStart(2, '0') + date.getDate().toString().padStart(2, '0');
-    const uniqueId = "FAT-" + dateString + "-" + (Math.floor(Math.random() * 900) + 100);
+    const uniqueId = "FAT-" + dateString + "-" + date.getHours().toString().padStart(2, '0') + date.getMinutes().toString().padStart(2, '0') + "-" + (Math.floor(Math.random() * 9000) + 1000);
 
     const payload = {
         uid: uniqueId, productType: document.getElementById('product').value, dailyQty: document.getElementById('qty').value, 
