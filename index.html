@@ -76,6 +76,35 @@
                     <input type="number" id="qty" placeholder="e.g., 500" required>
                 </div>
 
+                <!-- NEW: Daily Requirement -->
+                <div class="input-group">
+                    <label for="daily-req">Daily Requirement (Tons)</label>
+                    <input type="number" id="daily-req" placeholder="e.g., 50" required>
+                </div>
+
+                <!-- NEW: Shipment Purpose -->
+                <div class="input-group">
+                    <label for="shipment-purpose">Shipment Purpose</label>
+                    <select id="shipment-purpose" required>
+                        <option value="">Select Purpose...</option>
+                        <option value="Containment">Shipment for containment</option>
+                        <option value="Diversion">Shipment for diversion/direct sale to BA</option>
+                        <option value="Both">Both</option>
+                    </select>
+                </div>
+
+                <!-- NEW: Conditional Quantities (Hidden by default) -->
+                <div id="both-quantities" style="display: none; gap: 10px; margin-bottom: 15px;">
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label for="containment-qty">Containment Qty</label>
+                        <input type="number" id="containment-qty" placeholder="0">
+                    </div>
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label for="diversion-qty">Diversion Qty</label>
+                        <input type="number" id="diversion-qty" placeholder="0">
+                    </div>
+                </div>
+
                 <div class="input-group">
                     <label for="zone">Destination Zone</label>
                     <select id="zone" required>
@@ -171,7 +200,7 @@
             </div>
         </section>
 
-        <!-- Stage 04a: Plant Fulfillment (Plant Shipments Only) -->
+        <!-- Stage 04a: Plant Fulfillment -->
         <section id="tab-plant" class="tab-content">
             <h3>04. Plant Fulfillment</h3>
             <p style="margin-bottom: 10px;">Execute loading and confirm batch for FIFO compliance.</p>
@@ -194,7 +223,7 @@
             </div>
         </section>
 
-        <!-- Stage 04b: Transshipment (NEW SECTION) -->
+        <!-- Stage 04b: Transshipment -->
         <section id="tab-transshipment" class="tab-content">
             <h3>WH Transshipment Execution</h3>
             <p style="margin-bottom: 10px;">Assign Source WH and Execute Quotations.</p>
@@ -237,19 +266,23 @@
                 <button id="export-csv" class="submit-btn" style="flex: 1; margin: 0; background-color: #0e3b24;">📥 Export to Excel</button>
             </div>
             
-            <div class="table-container">
-                <table id="dashboard-table">
+            <div class="table-container" style="overflow-x: auto;">
+                <table id="dashboard-table" style="min-width: 900px;"> <!-- Made wider to fit new columns -->
                     <thead>
                         <tr>
                             <th>Shipment ID</th>
+                            <th>Type</th>
+                            <th>Destination WH</th>
                             <th>Product</th>
-                            <th>Qty</th>
-                            <th>Route (Src ➔ Dest)</th>
+                            <th>Total Qty</th>
+                            <th>Daily Req</th>
+                            <th>Source</th>
+                            <th>Purpose</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="dashboard-body">
-                        <tr><td colspan="5" style="text-align: center;">Click "Load Live Dashboard" to view records.</td></tr>
+                        <tr><td colspan="9" style="text-align: center;">Click "Load Live Dashboard" to view records.</td></tr>
                     </tbody>
                 </table>
             </div>

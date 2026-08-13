@@ -69,7 +69,7 @@ function applyRoleAccess(role) {
     }
     else if (role.includes("Plant Logistics")) {
         document.getElementById('btn-plant').style.display = 'inline-block';
-        document.getElementById('btn-transshipment').style.display = 'inline-block'; // Plant team gets transshipment visibility
+        document.getElementById('btn-transshipment').style.display = 'inline-block'; 
         document.getElementById('btn-tracker').style.display = 'inline-block'; 
         document.getElementById('btn-dashboard').style.display = 'inline-block'; 
         document.getElementById('btn-plant').click(); 
@@ -128,12 +128,42 @@ regionSelect.addEventListener("change", function() {
     }
 });
 
-// --- 2. FORM SUBMISSION LOGIC ---
+// NEW: Toggle "Both" Quantity Fields
+document.getElementById('shipment-purpose').addEventListener('change', function() {
+    const bothDiv = document.getElementById('both-quantities');
+    if (this.value === 'Both') {
+        bothDiv.style.display = 'flex';
+        document.getElementById('containment-qty').required = true;
+        document.getElementById('diversion-qty').required = true;
+    } else {
+        bothDiv.style.display = 'none';
+        document.getElementById('containment-qty').required = false;
+        document.getElementById('diversion-qty').required = false;
+    }
+});
+
+// --- 2. FORM SUBMISSION LOGIC (WITH MATH VALIDATION) ---
 const salesForm = document.getElementById('sales-form');
 const submitBtn = document.querySelector('.submit-btn');
 
 salesForm.addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    // NEW: Validation for "Both"
+    let purpose = document.getElementById('shipment-purpose').value;
+    let totalQty = parseFloat(document.getElementById('qty').value) || 0;
+    let contQty = 0;
+    let divQty = 0;
+
+    if (purpose === 'Both') {
+        contQty = parseFloat(document.getElementById('containment-qty').value) || 0;
+        divQty = parseFloat(document.getElementById('diversion-qty').value) || 0;
+        if ((contQty + divQty) > totalQty) {
+            showToast("Error: Containment + Diversion Qty cannot exceed Total Qty!", "error");
+            return; // Stop submission
+        }
+    }
+
     submitBtn.innerHTML = '<span class="spinner"></span>Submitting...';
     submitBtn.disabled = true;
 
@@ -144,18 +174,24 @@ salesForm.addEventListener('submit', function(e) {
     const payload = {
         uid: uniqueId,
         productType: document.getElementById('product').value,
-        dailyQty: document.getElementById('qty').value,
+        dailyQty: document.getElementById('qty').value, // Total Qty
         location: document.getElementById('location').value,
         zone: document.getElementById('zone').value,
         region: document.getElementById('region').value,
-        shipmentType: document.getElementById('shipment-type').value, // Transshipment or Plant
-        stage: "01. Pending RDM Approval"
+        shipmentType: document.getElementById('shipment-type').value, 
+        stage: "01. Pending RDM Approval",
+        // New Fields
+        dailyRequirement: document.getElementById('daily-req').value,
+        shipmentPurpose: purpose,
+        containmentQty: contQty,
+        diversionQty: divQty
     };
 
     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     .then(() => {
         showToast("Success! ID: " + uniqueId + " sent for RDM Approval.", "success");
         salesForm.reset(); 
+        document.getElementById('both-quantities').style.display = 'none'; // reset UI
         regionSelect.innerHTML = '<option value="">Select Region...</option>'; warehouseSelect.innerHTML = '<option value="">Select Warehouse...</option>';
     }).catch(() => { showToast("Error saving request.", "error"); }).finally(() => { submitBtn.textContent = 'Submit Request'; submitBtn.disabled = false; });
 });
@@ -246,7 +282,7 @@ window.routeTransshipment = function(uid) {
     .then(() => { showToast(`Routed ${uid} to WH Officer!`, "success"); setTimeout(() => document.getElementById('btn-queue').click(), 1500); });
 };
 
-// --- 5. PLANT FULFILLMENT LOGIC (Plant Shipments Only) ---
+// --- 5. PLANT FULFILLMENT LOGIC ---
 const plantBody = document.getElementById('plant-body');
 document.getElementById('btn-plant').addEventListener('click', function() {
     plantBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading plant assignments...</td></tr>';
@@ -254,7 +290,7 @@ document.getElementById('btn-plant').addEventListener('click', function() {
         plantBody.innerHTML = ''; 
         const plantShipments = data.data.filter(s => {
             if ((s.Stage || s.stage) !== "03. Plant Fulfillment") return false;
-            if ((s.Shipment_Type || s.shipmentType) === "Transshipment") return false; // Hide transshipments here
+            if ((s.Shipment_Type || s.shipmentType) === "Transshipment") return false; 
             if (currentUserRole === "Super Admin") return true;
             if (currentUserRole.includes("Plant Logistics")) {
                 let userPlantCity = currentUserRole.split(" ").pop().toUpperCase();
@@ -281,7 +317,7 @@ window.dispatchPlant = function(uid) {
     .then(() => { showToast(`Shipment ${uid} dispatched!`, "success"); setTimeout(() => document.getElementById('btn-plant').click(), 1500); });
 };
 
-// --- 6. WH TRANSSHIPMENT LOGIC (NEW) ---
+// --- 6. WH TRANSSHIPMENT LOGIC ---
 const tsBody = document.getElementById('transshipment-body');
 document.getElementById('btn-transshipment').addEventListener('click', function() {
     tsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading transshipments...</td></tr>';
@@ -299,7 +335,6 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
         
         if (tsShipments.length === 0) { tsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pending transshipments!</td></tr>'; return; }
 
-        // Build 198+ Source WH Dropdown List dynamically from warehouseData
         let whOptions = '<option value="">Select Source WH...</option>';
         let allWHs = [];
         for (let z in warehouseData) { for (let r in warehouseData[z]) { warehouseData[z][r].forEach(w => allWHs.push(w.code + " - " + w.name)); } }
@@ -316,7 +351,7 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
                 sourceHtml = `<select id="src-wh-${uid}" style="width:100%; padding:4px;">${whOptions}</select>`;
                 actionHtml = `<button onclick="assignSourceWh('${uid}')" style="background:#f9a826; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Assign Source</button>`;
             } else if (stage === "04. Transshipment Quotation") {
-                sourceHtml = `<strong>${srcWh.split(" - ")[0]}</strong>`; // Just display WH Code
+                sourceHtml = `<strong>${srcWh.split(" - ")[0]}</strong>`; 
                 actionHtml = `<button onclick="dispatchTransshipment('${uid}')" style="background:#1a5c3a; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Dispatch</button>`;
             }
 
@@ -353,10 +388,10 @@ document.getElementById('btn-tracker').addEventListener('click', function() {
     });
 });
 
-// --- 8. DASHBOARD LOGIC ---
+// --- 8. DASHBOARD LOGIC (NEW UNIFIED EXPORT FORMAT) ---
 const dashboardBody = document.getElementById('dashboard-body');
 document.getElementById('btn-dashboard').addEventListener('click', function() {
-    dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading records...</td></tr>';
+    dashboardBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading records...</td></tr>';
     fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
         let prodTotals = {}; let regTotals = {};
         
@@ -376,19 +411,34 @@ document.getElementById('btn-dashboard').addEventListener('click', function() {
 
         dashboardBody.innerHTML = ''; 
         const disbursedShipments = data.data.filter(s => (s.Stage || s.stage) === "05. Disbursement");
-        if (disbursedShipments.length === 0) { dashboardBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No completed shipments yet!</td></tr>'; return; }
+        if (disbursedShipments.length === 0) { dashboardBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No completed shipments yet!</td></tr>'; return; }
 
         disbursedShipments.reverse().forEach(s => {
             let uid = s.UID || s.uid;
             let type = s.Shipment_Type || s.shipmentType || "Plant Shipment";
-            let prodDisplay = type === "Transshipment" ? `${s.Product_Type}<br><small style="color:#d35400;">[Transshipment]</small>` : s.Product_Type;
             let destLoc = (s.Warehouse_Location || s.location || "N/A").split(" - ")[0];
-            
-            // Unify Source Display
+            let dailyReq = s.Daily_Requirement || s.dailyRequirement || "N/A";
             let sourceLoc = type === "Transshipment" ? (s.Source_WH || s.sourceWh || "").split(" - ")[0] : (s.Assigned_Plant || s.assignedPlant || "Plant");
-            let routeDisplay = `<small>From:</small> <strong>${sourceLoc}</strong><br><small>To:</small> <strong>${destLoc}</strong>`;
+            
+            // Format Purpose carefully so the Excel export formats nicely on one line
+            let purposeDisplay = s.Shipment_Purpose || s.shipmentPurpose || "N/A";
+            if (purposeDisplay === "Both") {
+                let cq = s.Containment_Qty || s.containmentQty || 0;
+                let dq = s.Diversion_Qty || s.diversionQty || 0;
+                purposeDisplay = `Both (Cont: ${cq} | Div: ${dq})`;
+            }
 
-            dashboardBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${s.Daily_Qty}</td><td>${routeDisplay}</td><td><span class="stage-badge" style="background:#28a745; color:white;">Completed</span></td></tr>`;
+            dashboardBody.innerHTML += `<tr>
+                <td><strong>${uid}</strong></td>
+                <td>${type}</td>
+                <td>${destLoc}</td>
+                <td>${s.Product_Type}</td>
+                <td>${s.Daily_Qty}</td>
+                <td>${dailyReq}</td>
+                <td>${sourceLoc}</td>
+                <td>${purposeDisplay}</td>
+                <td><span class="stage-badge" style="background:#28a745; color:white;">Completed</span></td>
+            </tr>`;
         });
     });
 });
@@ -399,6 +449,7 @@ document.getElementById('search-tracker').addEventListener('keyup', function() {
     document.querySelectorAll('#tracker-body tr').forEach(row => row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none');
 });
 
+// The Excel Export function automatically reads the new 9 columns built above!
 document.getElementById('export-csv').addEventListener('click', function() {
     let csv = [];
     document.querySelectorAll('#dashboard-table tr').forEach(row => {
