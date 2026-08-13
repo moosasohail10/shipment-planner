@@ -185,7 +185,7 @@ salesForm.addEventListener('submit', function(e) {
 // --- 3. RDM APPROVAL & REJECTION LOGIC ---
 const approveBody = document.getElementById('approve-body');
 document.getElementById('btn-approve').addEventListener('click', function() {
-    approveBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading RDM approvals...</td></tr>';
+    approveBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading RDM approvals...</td></tr>';
     fetch(GOOGLE_SCRIPT_URL).then(r => r.json()).then(data => {
         approveBody.innerHTML = ''; 
         const rdmShipments = data.data.filter(s => {
@@ -197,7 +197,7 @@ document.getElementById('btn-approve').addEventListener('click', function() {
             } return false;
         });
         
-        if (rdmShipments.length === 0) { approveBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No pending approvals!</td></tr>'; return; }
+        if (rdmShipments.length === 0) { approveBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pending approvals!</td></tr>'; return; }
 
         rdmShipments.forEach(shipment => {
             let uid = shipment.UID || shipment.uid;
@@ -205,9 +205,17 @@ document.getElementById('btn-approve').addEventListener('click', function() {
             let prodDisplay = type === "Transshipment" ? `${shipment.Product_Type}<br><small style="color:#d35400;font-weight:bold;">[Transshipment]</small>` : shipment.Product_Type;
             let shortLoc = (shipment.Warehouse_Location || shipment.location).split(" - ")[0];
 
-            // Added Input for Remarks and a Reject Button
+            // NEW: Parse and display Purpose
+            let purposeDisplay = shipment.Shipment_Purpose || shipment.shipmentPurpose || "N/A";
+            if (purposeDisplay === "Both") {
+                let cq = shipment.Containment_Qty || shipment.containmentQty || 0; 
+                let dq = shipment.Diversion_Qty || shipment.diversionQty || 0;
+                purposeDisplay = `Both<br><small>(Cont: ${cq} | Div: ${dq})</small>`;
+            }
+
             approveBody.innerHTML += `<tr>
                 <td><strong>${uid}</strong></td><td>${prodDisplay}</td><td>${shipment.Daily_Qty}</td><td>${shortLoc}</td>
+                <td>${purposeDisplay}</td>
                 <td>
                     <div style="display:flex; flex-direction:column; gap:6px;">
                         <input type="text" id="remark-rdm-${uid}" placeholder="Remarks (Required for Rejection)" style="padding:4px; font-size:0.8rem; border-radius:4px; border:1px solid #ccc;">
@@ -352,11 +360,13 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
         const tsShipments = data.data.filter(s => {
             let stage = s.Stage || s.stage || "";
             if ((s.Shipment_Type || s.shipmentType) !== "Transshipment") return false;
+            
             if (currentUserRole === "Super Admin") return stage === "03. WH Transshipment" || stage === "04. Transshipment Quotation";
             if (currentUserRole === "WH Transshipment Officer") return stage === "03. WH Transshipment";
-            if (currentUserRole.includes("Plant Logistics")) return stage === "04. Transshipment Quotation";
+            if (currentUserRole.includes("Plant Logistics")) return stage === "04. Transshipment Quotation"; // Global Visibility for all plants
             return false;
         });
+        
         if (tsShipments.length === 0) { tsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No pending transshipments!</td></tr>'; return; }
 
         let whOptions = '<option value="">Select Source WH...</option>';
@@ -376,8 +386,10 @@ document.getElementById('btn-transshipment').addEventListener('click', function(
                 actionHtml = `<button onclick="assignSourceWh('${uid}')" style="background:#f9a826; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Assign Source</button>`;
             } else if (stage === "04. Transshipment Quotation") {
                 sourceHtml = `<strong>${srcWh.split(" - ")[0]}</strong>`; 
-                actionHtml = `<button onclick="dispatchTransshipment('${uid}')" style="background:#1a5c3a; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Dispatch</button>`;
+                // NEW: Transshipment action changed to "Accept Request" instead of Dispatch
+                actionHtml = `<button onclick="acceptTransshipment('${uid}')" style="background:#17a2b8; color:white; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">Accept Request</button>`;
             }
+
             tsBody.innerHTML += `<tr><td><strong>${uid}</strong></td><td>${s.Product_Type}</td><td>${s.Daily_Qty}</td><td>${destLoc}</td><td>${sourceHtml}</td><td>${actionHtml}</td></tr>`;
         });
     });
@@ -390,9 +402,10 @@ window.assignSourceWh = function(uid) {
     .then(() => { showToast(`Assigned ${src} to ${uid}!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
 };
 
-window.dispatchTransshipment = function(uid) {
+// NEW: Accept Request Action
+window.acceptTransshipment = function(uid) {
     fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: "update", uid: uid, stage: "05. Disbursement" }) })
-    .then(() => { showToast(`Transshipment ${uid} Dispatched!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
+    .then(() => { showToast(`Transshipment ${uid} Accepted!`, "success"); setTimeout(() => document.getElementById('btn-transshipment').click(), 1500); });
 };
 
 // --- 7. ID TRACKER LOGIC (Shows Remarks & Rejection Badge) ---
